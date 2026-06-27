@@ -8,11 +8,16 @@ class LocalNotifier {
 
   Future<void> init() async {
     if (_ready) return;
-    const android = AndroidInitializationSettings('ic_notification');
-    const ios = DarwinInitializationSettings();
-    await _plugin
-        .initialize(const InitializationSettings(android: android, iOS: ios));
-    _ready = true;
+    try {
+      const android = AndroidInitializationSettings('ic_notification');
+      const ios = DarwinInitializationSettings();
+      await _plugin
+          .initialize(const InitializationSettings(android: android, iOS: ios));
+      _ready = true;
+    } catch (e, s) {
+      // ignore: avoid_print
+      print('PUSH_NOTIF_INIT_ERROR: $e\n$s');
+    }
   }
 
   Future<bool> requestPermission() async {
@@ -67,8 +72,9 @@ class LocalNotifier {
     try {
       await _plugin.show(
           id, title, body, NotificationDetails(android: android, iOS: ios));
-    } catch (_) {
-      // Missing custom sound resource / platform quirk — never crash the app.
+    } catch (e, s) {
+      // ignore: avoid_print
+      print('PUSH_NOTIF_SHOW_ERROR: $e\n$s');
     }
   }
 }
