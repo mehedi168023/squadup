@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import '../../core/heads_up.dart';
+import '../../core/notification_router.dart';
 import '../models/heads_up_notification.dart';
 import '../models/notification_model.dart';
 import 'notifications/notif_platform.dart';
@@ -40,9 +41,10 @@ class NotificationService extends GetxService {
         final data = notif.additionalData;
         if (data != null) {
           try {
-            final target = data['target']?.toString();
+            final target = (data['action_target_screen'] ?? data['target'])?.toString();
+            final args = data['action_args'] is Map ? Map<String, dynamic>.from(data['action_args']) : const <String, dynamic>{};
             if (target != null && target.isNotEmpty) {
-              Get.toNamed(target);
+              NotificationRouter.open(target, args);
             }
           } catch (_) {}
         }
@@ -51,8 +53,22 @@ class NotificationService extends GetxService {
       // Handle foreground notifications
       OneSignal.Notifications.addForegroundWillDisplayListener((event) {
         final notif = event.notification;
+        final data = notif.additionalData ?? {};
+        
+        final map = {
+          'id': notif.notificationId,
+          'title': notif.title ?? '',
+          'message': notif.body ?? '',
+          ...data,
+        };
+        final headsUpNotif = HeadsUpNotification.fromJson(map);
+
+        // Show the in-app heads-up banner
+        HeadsUp.show(headsUpNotif);
+
+        // Also push it to the internal feed items
         push(
-          type: _feedTypeFromText(notif.title ?? '', notif.body ?? ''),
+          type: _feedType(headsUpNotif),
           title: notif.title ?? '',
           body: notif.body ?? '',
           osNotify: false, // OneSignal is already displaying the system notification
@@ -62,18 +78,6 @@ class NotificationService extends GetxService {
       // ignore: avoid_print
       print('ONESIGNAL_INIT_ERROR: $e\n$s');
     }
-  }
-
-  NotifType _feedTypeFromText(String title, String body) {
-    final text = '$title $body'.toLowerCase();
-    if (text.contains('wallet') || text.contains('deposit') || text.contains('withdraw') || text.contains('bkash') || text.contains('nagad')) {
-      return NotifType.wallet;
-    } else if (text.contains('match') || text.contains('tournament') || text.contains('ludo') || text.contains('room')) {
-      return NotifType.match;
-    } else if (text.contains('win') || text.contains('prize') || text.contains('promo')) {
-      return NotifType.promo;
-    }
-    return NotifType.system;
   }
 
   Future<bool> requestOsPermission() async {

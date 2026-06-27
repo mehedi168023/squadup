@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../app/core/app_constants.dart';
 import '../../app/data/services/session_service.dart';
 import '../../app/routes/app_routes.dart';
+import '../../app/data/services/permission_service.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
 
@@ -40,6 +41,9 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     _intro.forward();
     _boot();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PermissionService.to.requestAll();
+    });
   }
 
   /// Restore a saved session (if any) while the splash animation plays, then
