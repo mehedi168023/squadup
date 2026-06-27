@@ -12,6 +12,7 @@ dependencies:
   get: ^4.6.6
   shared_preferences: ^2.3.2
   flutter_local_notifications: ^18.0.1
+  onesignal_flutter: ^5.2.0
   url_launcher: ^6.3.0
   permission_handler: ^11.3.1 # notification + file/media permission requests
   # All backend/network dependencies were removed — the app now runs entirely

@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import '../../core/heads_up.dart';
 import '../models/heads_up_notification.dart';
 import '../models/notification_model.dart';
@@ -22,10 +23,65 @@ class NotificationService extends GetxService {
     // after the first frame so it doesn't compete with startup rendering — a
     // major contributor to skipped frames on launch. `show()` also lazily
     // re-inits the notifier, so nothing breaks if a notification fires first.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _notifier.init());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _notifier.init();
+      initOneSignal();
+    });
   }
 
-  Future<bool> requestOsPermission() => _notifier.requestPermission();
+  Future<void> initOneSignal() async {
+    try {
+      // Initialize OneSignal. Replace with your actual App ID in your dashboard.
+      OneSignal.initialize("39c35d80-6f4e-4672-86c8-40cdb14dfaff");
+
+      // Handle notification clicks
+      OneSignal.Notifications.addClickListener((event) {
+        final notif = event.notification;
+        final data = notif.additionalData;
+        if (data != null) {
+          try {
+            final target = data['target']?.toString();
+            if (target != null && target.isNotEmpty) {
+              Get.toNamed(target);
+            }
+          } catch (_) {}
+        }
+      });
+
+      // Handle foreground notifications
+      OneSignal.Notifications.addForegroundWillDisplayListener((event) {
+        final notif = event.notification;
+        push(
+          type: _feedTypeFromText(notif.title ?? '', notif.body ?? ''),
+          title: notif.title ?? '',
+          body: notif.body ?? '',
+          osNotify: false, // OneSignal is already displaying the system notification
+        );
+      });
+    } catch (e, s) {
+      // ignore: avoid_print
+      print('ONESIGNAL_INIT_ERROR: $e\n$s');
+    }
+  }
+
+  NotifType _feedTypeFromText(String title, String body) {
+    final text = '$title $body'.toLowerCase();
+    if (text.contains('wallet') || text.contains('deposit') || text.contains('withdraw') || text.contains('bkash') || text.contains('nagad')) {
+      return NotifType.wallet;
+    } else if (text.contains('match') || text.contains('tournament') || text.contains('ludo') || text.contains('room')) {
+      return NotifType.match;
+    } else if (text.contains('win') || text.contains('prize') || text.contains('promo')) {
+      return NotifType.promo;
+    }
+    return NotifType.system;
+  }
+
+  Future<bool> requestOsPermission() async {
+    try {
+      await OneSignal.Notifications.requestPermission(true);
+    } catch (_) {}
+    return _notifier.requestPermission();
+  }
 
   /// Fires a real OS heads-up notification right after a successful login so the
   /// pipeline is verifiable end-to-end. Requests the Android 13+
