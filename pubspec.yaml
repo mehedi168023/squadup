@@ -1,0 +1,108 @@
+name: squadup
+description: "SquadUp Tournament — Free Fire tournament & wallet app."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  get: ^4.6.6
+  shared_preferences: ^2.3.2
+  flutter_local_notifications: ^18.0.1
+  url_launcher: ^6.3.0
+  permission_handler: ^11.3.1 # notification + file/media permission requests
+  # All backend/network dependencies were removed — the app now runs entirely
+  # on local mock data. Removed on purpose (don't re-add):
+  #  - dio, socket_io_client, firebase_core, firebase_messaging,
+  #    google_sign_in, http (REST/realtime/push/geo).
+  # Removed (APK-size pass):
+  #  - webview_flutter: unused in Dart (deposit gateway is a mock screen).
+  #  - carousel_slider: replaced by a built-in PageView (PromoBanner).
+  #  - flutter_easyloading: replaced by a lightweight in-house AppLoader overlay.
+  #  - cupertino_icons: no CupertinoIcons referenced anywhere.
+  #  - intl: 2 DateFormat calls replaced by local shortDateTime/fullDateWeekday.
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  image: ^4.3.0
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.1
+
+flutter:
+  uses-material-design: true
+
+  # Only runtime-loaded images are bundled. `assets/branding/` is intentionally
+  # NOT listed: those are source images consumed by flutter_launcher_icons /
+  # flutter_native_splash at build time (by path), so bundling them would add
+  # ~3.4 MB of dead weight to the APK.
+  assets:
+    - assets/images/logo.webp
+    - assets/images/freefire_logo.webp
+    - assets/images/ludo_classic.webp
+    - assets/images/ludo_auto.webp
+    - assets/images/ff_topup.webp
+    - assets/images/ludo_kingpass.webp
+    - assets/images/ludo_uid_guide.webp
+    - assets/images/shop_products.webp
+    - assets/images/shop_topup.webp
+    - assets/images/shop_gaming_logo.webp
+    - assets/images/product_mouse_vx7.webp
+    - assets/images/product_headset_kraken.webp
+    - assets/images/product_mouse_vx9.webp
+    - assets/images/product_keyboard_atom63.webp
+    - assets/images/product_gamepad_shooter3.webp
+    - assets/images/banner_admoney.webp
+    - assets/images/banner_howtoplay.webp
+    - assets/images/banner_joingroup.webp
+
+  fonts:
+    # Display font is only ever used at w800 (see AppTextStyles), so only the
+    # ExtraBold weight is bundled. All three weights are subset to Latin +
+    # Bengali + symbols to keep the APK small.
+    - family: BalooDa2
+      fonts:
+        - asset: assets/fonts/BalooDa2-ExtraBold.ttf
+          weight: 800
+    - family: GoogleSans
+      fonts:
+        - asset: assets/fonts/GoogleSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/GoogleSans-Medium.ttf
+          weight: 500
+
+# ------------------------------------------------------------------
+# App icons — generated from the SquadUp master logo (no placeholders).
+# Run: dart run flutter_launcher_icons
+# ------------------------------------------------------------------
+flutter_launcher_icons:
+  image_path: "assets/branding/icon_full.png"
+  android: "ic_launcher"
+  ios: true
+  remove_alpha_ios: true
+  min_sdk_android: 21
+  # Adaptive icon (Android 8+): foreground logo on the brand navy background.
+  adaptive_icon_background: "#0E0C18"
+  adaptive_icon_foreground: "assets/branding/icon_foreground.png"
+  adaptive_icon_monochrome: "assets/branding/icon_monochrome.png"
+  web:
+    generate: true
+    image_path: "assets/branding/icon_full.png"
+    background_color: "#0E0C18"
+    theme_color: "#7C3AED"
+
+# ------------------------------------------------------------------
+# Native splash (Android 12+ / iOS) — SquadUp logo on brand background.
+# Run: dart run flutter_native_splash:create
+# ------------------------------------------------------------------
+flutter_native_splash:
+  color: "#0E0C18"
+  image: assets/branding/splash_logo.png
+  android_12:
+    image: assets/branding/splash_logo.png
+    color: "#0E0C18"
+  web: false

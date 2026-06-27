@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Fully transparent "icon" for the Android 12+ system splash screen.
+
+  Android 12 forces the windowSplashScreenAnimatedIcon to be masked into a
+  CIRCLE (an OS-level limitation — a square logo cannot be shown there). To
+  avoid an awkward round logo on launch, we make the system splash icon
+  transparent: the cold-start screen then shows only the brand background
+  (#0E0C18), and the real SQUARE logo is presented by the in-app splash screen
+  (lib/features/splash/splash_screen.dart) a moment later.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@android:color/transparent" />
+</shape>
