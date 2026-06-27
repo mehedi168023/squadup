@@ -40,7 +40,7 @@ class LocalNotifier {
     // icon. The small status-bar icon is rendered monochrome by Android on all
     // modern devices, so the launcher icon as the *large* icon is the reliable,
     // device-independent way to surface the real brand logo in the shade.
-    const largeIcon = DrawableResourceAndroidBitmap('ic_launcher');
+    const largeIcon = DrawableResourceAndroidBitmap('ic_notification');
     final android = hasSound
         ? AndroidNotificationDetails(
             'squadup_sound_$sound',
