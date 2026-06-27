@@ -1,5 +1,5 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../../app/widgets/premium_back_button.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../app/core/app_constants.dart';
@@ -10,9 +10,9 @@ import '../../app/data/models/misc_models.dart';
 import '../../app/data/services/bd_location_api.dart';
 import '../../app/data/services/session_service.dart';
 import '../../app/theme/app_colors.dart';
-import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_text_styles.dart';
 import '../../app/widgets/common_widgets.dart';
+import '../../app/widgets/premium_back_button.dart';
 import '../../app/widgets/primary_button.dart';
 import '../../app/widgets/responsive.dart';
 import '../../app/widgets/skeleton.dart';
@@ -157,102 +157,145 @@ class _ProductBuyScreenState extends State<ProductBuyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(leading: const PremiumBackButton(), title: const Text('Checkout')),
+      appBar: AppBar(
+        leading: const PremiumBackButton(),
+        title: const Text('Checkout', style: AppTextStyles.h2),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       bottomNavigationBar:
           _BottomBar(total: _total, loading: _placing, onPlace: _placeOrder),
       body: ResponsiveCenter(
         child: ListView(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
             _ProductSummary(product: product),
-            const SizedBox(height: AppSpacing.xl),
-            const SectionHeader('QUANTITY'),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: 16),
             _QuantityRow(
               qty: _qty,
               onMinus: () => setState(() => _qty = (_qty - 1).clamp(1, 99)),
               onPlus: () => setState(() => _qty = (_qty + 1).clamp(1, 99)),
             ),
             if (product.colors.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.xl),
-              const SectionHeader('SELECT COLOR'),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: 16),
               _ColorPicker(
                 colors: product.colors,
                 selected: _color,
                 onSelect: (c) => setState(() => _color = c),
               ),
             ],
-            const SizedBox(height: AppSpacing.xl),
-            const SectionHeader('DELIVERY AREA'),
-            const SizedBox(height: AppSpacing.md),
-            _DivisionDropdown(
-              divisions: _divisions,
-              value: _division,
-              loading: _loadingDiv,
-              error: _divError,
-              onRetry: _loadDivisions,
-              onChanged: (d) {
-                setState(() => _division = d);
-                if (d != null) _loadDistricts(d.id);
-              },
+            const SizedBox(height: 16),
+            
+            // Location Selection Card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: _premiumCardDeco(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.local_shipping_outlined, color: AppColors.primary, size: 20),
+                      const SizedBox(width: 8),
+                      Text('Delivery Location', 
+                        style: AppTextStyles.title.copyWith(fontSize: 15, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _DivisionDropdown(
+                    divisions: _divisions,
+                    value: _division,
+                    loading: _loadingDiv,
+                    error: _divError,
+                    onRetry: _loadDivisions,
+                    onChanged: (d) {
+                      setState(() => _division = d);
+                      if (d != null) _loadDistricts(d.id);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _DistrictDropdown(
+                    key: ValueKey('dist-${_division?.id}'),
+                    districts: _districts,
+                    value: _district,
+                    loading: _loadingDist,
+                    enabled: _division != null,
+                    onChanged: (d) => setState(() => _district = d),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: AppSpacing.md),
-            _DistrictDropdown(
-              // Re-create the field per division so its internal value never
-              // lingers from a previously-selected division's district list.
-              key: ValueKey('dist-${_division?.id}'),
-              districts: _districts,
-              value: _district,
-              loading: _loadingDist,
-              enabled: _division != null,
-              onChanged: (d) => setState(() => _district = d),
+            const SizedBox(height: 16),
+
+            // Shipping Details Card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: _premiumCardDeco(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.person_pin_circle_outlined, color: AppColors.primary, size: 20),
+                      const SizedBox(width: 8),
+                      Text('Shipping Details', 
+                        style: AppTextStyles.title.copyWith(fontSize: 15, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _Field(
+                    controller: _address,
+                    hint: 'House / road / area, city, post code…',
+                    icon: Icons.location_on_outlined,
+                    maxLines: 3,
+                    keyboardType: TextInputType.streetAddress,
+                  ),
+                  const SizedBox(height: 12),
+                  _Field(
+                    controller: _phone,
+                    hint: '01XXXXXXXXX',
+                    icon: Icons.phone_outlined,
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(11),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: AppSpacing.xl),
-            const SectionHeader('FULL ADDRESS'),
-            const SizedBox(height: AppSpacing.md),
-            _Field(
-              controller: _address,
-              hint: 'House / road / area, city, post code…',
-              icon: Icons.location_on_outlined,
-              maxLines: 3,
-              keyboardType: TextInputType.streetAddress,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            const SectionHeader('PHONE NUMBER'),
-            const SizedBox(height: AppSpacing.md),
-            _Field(
-              controller: _phone,
-              hint: '01XXXXXXXXX',
-              icon: Icons.phone_outlined,
-              keyboardType: TextInputType.phone,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(11),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: 16),
             _OrderSummary(
               qty: _qty,
               subtotal: _subtotal,
               delivery: _delivery,
               total: _total,
             ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: [
-                Icon(Icons.local_shipping_outlined,
-                    size: 15, color: context.cTextMuted),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'Cash on Delivery · ${taka(MockData.deliveryInsideDhaka)} inside Dhaka, '
-                    '${taka(MockData.deliveryOutsideDhaka)} outside.',
-                    style:
-                        AppTextStyles.body2.copyWith(color: context.cTextMuted),
+            const SizedBox(height: 16),
+            
+            // Shipping Notice
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded,
+                      size: 20, color: AppColors.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Cash on Delivery · ${taka(MockData.deliveryInsideDhaka)} inside Dhaka, '
+                      '${taka(MockData.deliveryOutsideDhaka)} outside Dhaka.',
+                      style:
+                          AppTextStyles.body2.copyWith(color: context.cTextDim, fontWeight: FontWeight.w500),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -263,10 +306,24 @@ class _ProductBuyScreenState extends State<ProductBuyScreen> {
 
 // ── Building blocks ───────────────────────────────────────────────────────
 
-BoxDecoration _cardDeco(BuildContext context) => BoxDecoration(
-      color: context.cSurface,
-      borderRadius: BorderRadius.circular(AppRadius.lg),
-      border: Border.all(color: context.cBorder),
+BoxDecoration _premiumCardDeco(BuildContext context) => BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          context.cSurface,
+          context.cSurface.withValues(alpha: 0.8),
+        ],
+      ),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: context.cBorder.withValues(alpha: 0.8)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.15),
+          blurRadius: 16,
+          offset: const Offset(0, 8),
+        ),
+      ],
     );
 
 /// Maps a colour name to a display swatch.
@@ -298,27 +355,40 @@ class _ProductSummary extends StatelessWidget {
     final hasOld =
         product.oldPrice != null && product.oldPrice! > product.price;
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: _cardDeco(context),
+      padding: const EdgeInsets.all(16),
+      decoration: _premiumCardDeco(context),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            child: Container(
-              width: 90,
-              height: 90,
-              color: AppColors.primary.withValues(alpha: 0.08),
-              child: product.image != null
-                  ? Image.asset(product.image!,
-                      fit: BoxFit.cover,
-                      cacheWidth: 260,
-                      errorBuilder: (_, __, ___) => Icon(product.icon,
-                          size: 40, color: AppColors.primary))
-                  : Icon(product.icon, size: 40, color: AppColors.primary),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                )
+              ]
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(15),
+              child: Container(
+                width: 96,
+                height: 96,
+                color: AppColors.primary.withValues(alpha: 0.05),
+                child: product.image != null
+                    ? Image.asset(product.image!,
+                        fit: BoxFit.cover,
+                        cacheWidth: 260,
+                        errorBuilder: (_, __, ___) => Icon(product.icon,
+                            size: 40, color: AppColors.primary))
+                    : Icon(product.icon, size: 40, color: AppColors.primary),
+              ),
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,14 +396,14 @@ class _ProductSummary extends StatelessWidget {
                 Text(product.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.title.copyWith(fontSize: 15)),
-                const SizedBox(height: 6),
+                    style: AppTextStyles.title.copyWith(fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(taka(product.price),
                         style: AppTextStyles.h2.copyWith(
-                            fontSize: 19, color: AppColors.matchesGreen)),
+                            fontSize: 21, color: AppColors.matchesGreen, fontWeight: FontWeight.bold)),
                     const SizedBox(width: 8),
                     if (hasOld)
                       Padding(
@@ -346,9 +416,20 @@ class _ProductSummary extends StatelessWidget {
                       ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                const StatusPill(
-                    text: 'In Stock', color: AppColors.matchesGreen),
+                const SizedBox(height: 10),
+                const Row(
+                  children: [
+                    StatusPill(
+                      text: 'In Stock',
+                      color: AppColors.matchesGreen,
+                    ),
+                    SizedBox(width: 8),
+                    StatusPill(
+                      text: 'Premium Delivery',
+                      color: AppColors.primary,
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -368,17 +449,35 @@ class _QuantityRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: _cardDeco(context),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: _premiumCardDeco(context),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _StepBtn(icon: Icons.remove_rounded, onTap: onMinus),
-          Expanded(
-            child: Text('$qty',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.h2.copyWith(fontSize: 18)),
+          Text(
+            'Quantity',
+            style: AppTextStyles.body1.copyWith(fontWeight: FontWeight.w600, color: context.cTextDim),
           ),
-          _StepBtn(icon: Icons.add_rounded, onTap: onPlus),
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: context.cBgAlt,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: context.cBorder),
+            ),
+            child: Row(
+              children: [
+                _StepBtn(icon: Icons.remove_rounded, onTap: onMinus),
+                SizedBox(
+                  width: 50,
+                  child: Text('$qty',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.h2.copyWith(fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
+                _StepBtn(icon: Icons.add_rounded, onTap: onPlus),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -392,17 +491,29 @@ class _StepBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
+    return InkWell(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      borderRadius: BorderRadius.circular(8),
       child: Container(
-        width: 46,
-        height: 40,
+        width: 36,
+        height: 36,
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF3B7BF0), Color(0xFF16357D)],
+          ),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.3),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            )
+          ]
         ),
-        child: Icon(icon, color: AppColors.primary, size: 22),
+        child: Icon(icon, color: Colors.white, size: 18),
       ),
     );
   }
@@ -417,60 +528,98 @@ class _ColorPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: colors.map((c) {
-        final sel = c == selected;
-        return GestureDetector(
-          onTap: () => onSelect(c),
-          child: AnimatedContainer(
-            duration: AppDurations.fast,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            decoration: BoxDecoration(
-              color: sel
-                  ? AppColors.primary.withValues(alpha: 0.14)
-                  : context.cSurface,
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-              border: Border.all(
-                color: sel ? AppColors.primary : context.cBorder,
-                width: sel ? 1.5 : 1,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 18,
-                  height: 18,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: _premiumCardDeco(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Select Color',
+            style: AppTextStyles.body1.copyWith(fontWeight: FontWeight.w600, color: context.cTextDim),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: colors.map((c) {
+              final sel = c == selected;
+              return GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onSelect(c);
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: _swatch(c),
-                    shape: BoxShape.circle,
-                    border:
-                        Border.all(color: Colors.white.withValues(alpha: 0.45)),
+                    gradient: sel
+                        ? LinearGradient(
+                            colors: [
+                              AppColors.primary.withValues(alpha: 0.2),
+                              AppColors.primary.withValues(alpha: 0.05),
+                            ],
+                          )
+                        : null,
+                    color: sel ? null : context.cBgAlt,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: sel ? AppColors.primary : context.cBorder,
+                      width: sel ? 1.5 : 1,
+                    ),
+                    boxShadow: sel ? [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.15),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      )
+                    ] : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: _swatch(c),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            )
+                          ]
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(c,
+                          style: AppTextStyles.title.copyWith(
+                              fontSize: 14,
+                              fontWeight: sel ? FontWeight.bold : FontWeight.w500,
+                              color: sel ? context.cText : context.cTextDim)),
+                      if (sel) ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.check_circle_rounded,
+                            size: 16, color: AppColors.primary),
+                      ],
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Text(c,
-                    style: AppTextStyles.title.copyWith(
-                        fontSize: 13,
-                        color: sel ? context.cText : context.cTextDim)),
-                if (sel) ...[
-                  const SizedBox(width: 6),
-                  const Icon(Icons.check_circle_rounded,
-                      size: 16, color: AppColors.primary),
-                ],
-              ],
-            ),
+              );
+            }).toList(),
           ),
-        );
-      }).toList(),
+        ],
+      ),
     );
   }
 }
 
-/// Division dropdown — populated live from the BD geo API. Shows a spinner while
-/// loading and a retry row if the request fails.
 class _DivisionDropdown extends StatelessWidget {
   final List<BdDivision> divisions;
   final BdDivision? value;
@@ -489,40 +638,51 @@ class _DivisionDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Smoothly cross-fade between the error/retry row and the live dropdown as
-    // the real async division load resolves or fails — no hard flicker.
     return CrossFade(
       showFirst: error,
       first: _RetryRow(label: 'Failed to load divisions', onRetry: onRetry),
       second: DropdownButtonFormField<BdDivision>(
-      initialValue: value,
-      isExpanded: true,
-      dropdownColor: context.cSurface,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      icon: loading
-          ? const _MiniSpinner()
-          : const Icon(Icons.keyboard_arrow_down_rounded),
-      style: AppTextStyles.body1.copyWith(color: context.cText, fontSize: 15),
-      decoration: InputDecoration(
-        hintText: loading ? 'Loading divisions…' : 'Select division',
-        prefixIcon: const Icon(Icons.map_outlined),
-        fillColor: context.cSurface,
-      ),
-      items: divisions
-          .map((d) => DropdownMenuItem(
-                value: d,
-                child: Text('${d.name}  •  ${d.bnName}',
-                    overflow: TextOverflow.ellipsis),
-              ))
-          .toList(),
-      onChanged: (loading || divisions.isEmpty) ? null : onChanged,
+        initialValue: value,
+        isExpanded: true,
+        dropdownColor: context.cSurface,
+        borderRadius: BorderRadius.circular(12),
+        icon: loading
+            ? const _MiniSpinner()
+            : const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary),
+        style: AppTextStyles.body1.copyWith(color: context.cText, fontSize: 15),
+        decoration: InputDecoration(
+          hintText: loading ? 'Loading divisions…' : 'Select division',
+          hintStyle: AppTextStyles.body2.copyWith(color: context.cTextMuted),
+          prefixIcon: const Icon(Icons.map_outlined, color: AppColors.primary),
+          fillColor: context.cBgAlt,
+          filled: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: context.cBorder),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: context.cBorder),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          ),
+        ),
+        items: divisions
+            .map((d) => DropdownMenuItem(
+                  value: d,
+                  child: Text('${d.name}  •  ${d.bnName}',
+                      overflow: TextOverflow.ellipsis),
+                ))
+            .toList(),
+        onChanged: (loading || divisions.isEmpty) ? null : onChanged,
       ),
     );
   }
 }
 
-/// District dropdown — cascades from the selected division. Disabled until a
-/// division is chosen.
 class _DistrictDropdown extends StatelessWidget {
   final List<BdDistrict> districts;
   final BdDistrict? value;
@@ -547,15 +707,30 @@ class _DistrictDropdown extends StatelessWidget {
       initialValue: value,
       isExpanded: true,
       dropdownColor: context.cSurface,
-      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderRadius: BorderRadius.circular(12),
       icon: loading
           ? const _MiniSpinner()
-          : const Icon(Icons.keyboard_arrow_down_rounded),
+          : const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary),
       style: AppTextStyles.body1.copyWith(color: context.cText, fontSize: 15),
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: const Icon(Icons.location_city_outlined),
-        fillColor: context.cSurface,
+        hintStyle: AppTextStyles.body2.copyWith(color: context.cTextMuted),
+        prefixIcon: const Icon(Icons.location_city_outlined, color: AppColors.primary),
+        fillColor: context.cBgAlt,
+        filled: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: context.cBorder),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: context.cBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
       ),
       items: districts
           .map((d) => DropdownMenuItem(
@@ -569,7 +744,6 @@ class _DistrictDropdown extends StatelessWidget {
   }
 }
 
-/// A small inline spinner sized to sit in a field's trailing icon slot.
 class _MiniSpinner extends StatelessWidget {
   const _MiniSpinner();
 
@@ -582,7 +756,6 @@ class _MiniSpinner extends StatelessWidget {
       );
 }
 
-/// Tappable error row offering a retry (shown if the divisions request fails).
 class _RetryRow extends StatelessWidget {
   final String label;
   final VoidCallback onRetry;
@@ -596,7 +769,7 @@ class _RetryRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
           color: AppColors.danger.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(AppRadius.lg),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
         ),
         child: Row(
@@ -646,12 +819,26 @@ class _Field extends StatelessWidget {
       style: AppTextStyles.body1.copyWith(fontSize: 15),
       decoration: InputDecoration(
         hintText: hint,
-        fillColor: context.cSurface,
+        hintStyle: AppTextStyles.body2.copyWith(color: context.cTextMuted),
+        fillColor: context.cBgAlt,
+        filled: true,
         alignLabelWithHint: true,
         prefixIcon: Padding(
-          // Keep the icon at the top on the multi-line address field.
           padding: EdgeInsets.only(bottom: maxLines > 1 ? 44 : 0),
-          child: Icon(icon),
+          child: Icon(icon, color: AppColors.primary.withValues(alpha: 0.7)),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: context.cBorder),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: context.cBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
       ),
     );
@@ -673,10 +860,20 @@ class _OrderSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: _cardDeco(context),
+      padding: const EdgeInsets.all(16),
+      decoration: _premiumCardDeco(context),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              const Icon(Icons.receipt_long_outlined, color: AppColors.primary, size: 20),
+              const SizedBox(width: 8),
+              Text('Order Summary', 
+                style: AppTextStyles.title.copyWith(fontSize: 15, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 16),
           _row(context, 'Subtotal ($qty item${qty > 1 ? 's' : ''})',
               taka(subtotal)),
           const SizedBox(height: 10),
@@ -684,7 +881,18 @@ class _OrderSummary extends StatelessWidget {
               delivery == 0 ? 'Select division' : taka(delivery),
               dim: delivery == 0),
           const SizedBox(height: 12),
-          Divider(height: 1, color: context.cBorder),
+          Container(
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  context.cBorder.withValues(alpha: 0.1),
+                  context.cBorder,
+                  context.cBorder.withValues(alpha: 0.1),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 12),
           _row(context, 'Total', taka(total), emphasize: true),
         ],
@@ -699,14 +907,14 @@ class _OrderSummary extends StatelessWidget {
       children: [
         Text(label,
             style: emphasize
-                ? AppTextStyles.title.copyWith(fontSize: 15)
+                ? AppTextStyles.title.copyWith(fontSize: 15, fontWeight: FontWeight.bold)
                 : AppTextStyles.body1.copyWith(color: context.cTextDim)),
         Text(value,
             style: emphasize
                 ? AppTextStyles.h2
-                    .copyWith(fontSize: 18, color: AppColors.matchesGreen)
+                    .copyWith(fontSize: 18, color: AppColors.matchesGreen, fontWeight: FontWeight.bold)
                 : AppTextStyles.title.copyWith(
-                    fontSize: 13.5,
+                    fontSize: 14,
                     color: dim ? context.cTextMuted : context.cText)),
       ],
     );
@@ -724,38 +932,50 @@ class _BottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: context.cSurface,
-        border: Border(top: BorderSide(color: context.cBorder)),
+        color: context.cSurface.withValues(alpha: 0.85),
+        border: Border(top: BorderSide(color: context.cBorder.withValues(alpha: 0.5))),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          )
+        ]
       ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-          child: Row(
-            children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: Row(
                 children: [
-                  Text('Total Payable',
-                      style: AppTextStyles.body2
-                          .copyWith(color: context.cTextDim)),
-                  const SizedBox(height: 2),
-                  Text(taka(total),
-                      style: AppTextStyles.h2.copyWith(fontSize: 20)),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Total Payable',
+                          style: AppTextStyles.body2
+                              .copyWith(color: context.cTextDim, fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 2),
+                      Text(taka(total),
+                          style: AppTextStyles.h2.copyWith(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.matchesGreen)),
+                    ],
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    child: PrimaryButton(
+                      label: 'Place Order',
+                      icon: Icons.shopping_bag_rounded,
+                      variant: ButtonVariant.green,
+                      loading: loading,
+                      onPressed: onPlace,
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: PrimaryButton(
-                  label: 'Place Order',
-                  icon: Icons.shopping_bag_rounded,
-                  variant: ButtonVariant.green,
-                  loading: loading,
-                  onPressed: onPlace,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
