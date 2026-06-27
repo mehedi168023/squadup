@@ -8,7 +8,7 @@ class LocalNotifier {
 
   Future<void> init() async {
     if (_ready) return;
-    const android = AndroidInitializationSettings('@drawable/ic_notification');
+    const android = AndroidInitializationSettings('ic_notification');
     const ios = DarwinInitializationSettings();
     await _plugin
         .initialize(const InitializationSettings(android: android, iOS: ios));
@@ -40,7 +40,7 @@ class LocalNotifier {
     // icon. The small status-bar icon is rendered monochrome by Android on all
     // modern devices, so the launcher icon as the *large* icon is the reliable,
     // device-independent way to surface the real brand logo in the shade.
-    const largeIcon = DrawableResourceAndroidBitmap('@mipmap/ic_launcher');
+    const largeIcon = DrawableResourceAndroidBitmap('ic_launcher');
     final android = hasSound
         ? AndroidNotificationDetails(
             'squadup_sound_$sound',
