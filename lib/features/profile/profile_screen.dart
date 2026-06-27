@@ -88,6 +88,12 @@ class ProfileScreen extends StatelessWidget {
                 onTap: () => Get.toNamed(AppRoutes.developer)),
             const SizedBox(height: 12),
             ListNavTile(
+                icon: Icons.bug_report_outlined,
+                label: 'Notification Diagnostics & Test',
+                subtitle: 'Test push notifications & channels',
+                onTap: () => Get.toNamed(AppRoutes.notificationTest)),
+            const SizedBox(height: 12),
+            ListNavTile(
               icon: Icons.logout,
               label: 'Logout',
               iconColor: AppColors.danger,

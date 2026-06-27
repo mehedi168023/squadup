@@ -15,6 +15,7 @@ import '../../features/matches/join_match_screen.dart';
 import '../../features/matches/match_info_screen.dart';
 import '../../features/matches/match_list_screen.dart';
 import '../../features/matches/match_rules_screen.dart';
+import '../../features/profile/notification_test_screen.dart';
 import '../../features/misc/info_screens.dart';
 import '../../features/my_matches/my_matches_screen.dart';
 import '../../features/shell/shell_screen.dart';
@@ -60,6 +61,7 @@ class AppPages {
     AppRoutes.topPlayers: AppTransitions.fadeThrough,
     AppRoutes.terms: AppTransitions.fadeThrough,
     AppRoutes.developer: AppTransitions.fadeThrough,
+    AppRoutes.notificationTest: AppTransitions.fadeThrough,
     AppRoutes.orders: AppTransitions.fadeThrough,
     AppRoutes.transactions: AppTransitions.fadeThrough,
     // Login → Home + checkout / wallet money flow — forward navigation.
@@ -127,5 +129,6 @@ class AppPages {
     GetPage(name: AppRoutes.topPlayers, page: () => const TopPlayersScreen()),
     GetPage(name: AppRoutes.terms, page: () => const TermsScreen()),
     GetPage(name: AppRoutes.developer, page: () => const DeveloperScreen()),
+    GetPage(name: AppRoutes.notificationTest, page: () => const NotificationTestScreen()),
   ];
 }

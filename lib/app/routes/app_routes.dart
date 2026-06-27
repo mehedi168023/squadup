@@ -28,4 +28,5 @@ abstract class AppRoutes {
   static const topPlayers = '/top-players';
   static const terms = '/terms';
   static const developer = '/developer';
+  static const notificationTest = '/notification-test';
 }
