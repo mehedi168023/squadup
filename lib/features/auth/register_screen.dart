@@ -4,6 +4,7 @@ import '../../app/core/app_constants.dart';
 import '../../app/core/validators.dart';
 import '../../app/data/models/heads_up_notification.dart';
 import '../../app/data/services/notification_service.dart';
+import '../../app/data/services/security_service.dart';
 import '../../app/data/services/session_service.dart';
 import '../../app/routes/app_routes.dart';
 import '../../app/theme/app_colors.dart';
@@ -37,9 +38,51 @@ class RegisterController extends GetxController {
     // Inline validation surfaces field-level errors; bail if anything fails.
     if (!(formKey.currentState?.validate() ?? false)) return;
     loading.value = true;
+
+    final email = identifier.text.trim();
+    final sec = SecurityService.to;
+
+    // 1. Device ban check
+    if (sec.isDeviceBanned()) {
+      loading.value = false;
+      Get.snackbar(
+        'Access Denied',
+        'This device has been banned from SquadUp Tournaments.',
+        backgroundColor: AppColors.danger,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    // 2. User ban check
+    if (sec.isUserBanned(email)) {
+      loading.value = false;
+      Get.snackbar(
+        'Access Denied',
+        'Your account has been banned due to policy violations.',
+        backgroundColor: AppColors.danger,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    // 3. One Device, One Account link check
+    final canLink = await sec.linkAccountToDevice(email);
+    if (!canLink) {
+      loading.value = false;
+      Get.snackbar(
+        'Security Lock',
+        'One Device, One Account Policy: This device is already linked to: ${sec.linkedUserEmail.value}.',
+        backgroundColor: AppColors.danger,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+      );
+      return;
+    }
+
     final ok = await SessionService.to.register(
       name.text.trim(),
-      identifier.text.trim(),
+      email,
       password.text,
       referCode: refer.text.trim(),
     );

@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import '../data/services/notification_service.dart';
 import '../data/services/permission_service.dart';
+import '../data/services/security_service.dart';
 import '../data/services/session_service.dart';
 import 'theme_controller.dart';
 
@@ -18,5 +19,6 @@ class InitialBinding extends Bindings {
     Get.put(SessionService(), permanent: true);
     Get.put(NotificationService(), permanent: true);
     Get.put(PermissionService(), permanent: true);
+    Get.put(SecurityService(), permanent: true);
   }
 }

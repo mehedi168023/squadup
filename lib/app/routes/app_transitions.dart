@@ -80,25 +80,25 @@ class _SharedAxis extends StatelessWidget {
     );
   }
 
-  /// Page coming in: slide from the offset to rest + fade in (late, 0.3→1.0).
+  /// Page coming in: slide from the offset to rest + fade in (late, 0.1→1.0).
   Widget _enter(Animation<double> anim, Widget child, {required bool reverse}) {
     final begin = reverse ? -AppMotion.shift : AppMotion.shift;
     final position = Tween<Offset>(begin: _offset(begin), end: Offset.zero)
         .chain(CurveTween(curve: AppMotion.curve))
         .animate(anim);
     final opacity =
-        CurveTween(curve: const Interval(0.30, 1.0)).animate(anim);
+        CurveTween(curve: const Interval(0.10, 1.0, curve: Curves.easeOut)).animate(anim);
     return _slideFade(position, opacity, child);
   }
 
-  /// Page going away: slide to the opposite offset + fade out (early, 0→0.3).
+  /// Page going away: slide to the opposite offset + fade out (early, 0→0.7).
   Widget _exit(Animation<double> anim, Widget child, {required bool reverse}) {
     final end = reverse ? AppMotion.shift : -AppMotion.shift;
     final position = Tween<Offset>(begin: Offset.zero, end: _offset(end))
         .chain(CurveTween(curve: AppMotion.curve))
         .animate(anim);
     final opacity = Tween<double>(begin: 1, end: 0)
-        .chain(CurveTween(curve: const Interval(0.0, 0.30)))
+        .chain(CurveTween(curve: const Interval(0.0, 0.70, curve: Curves.easeIn)))
         .animate(anim);
     return _slideFade(position, opacity, child);
   }
@@ -149,7 +149,7 @@ class _FadeThrough extends StatelessWidget {
 
   Widget _enter(Animation<double> anim, Widget child) {
     final opacity =
-        CurveTween(curve: const Interval(0.35, 1.0)).animate(anim);
+        CurveTween(curve: const Interval(0.10, 1.0, curve: Curves.easeOut)).animate(anim);
     final scale = Tween<double>(begin: 0.92, end: 1.0)
         .chain(CurveTween(curve: AppMotion.curve))
         .animate(anim);
@@ -161,7 +161,7 @@ class _FadeThrough extends StatelessWidget {
 
   Widget _exit(Animation<double> anim, Widget child) {
     final opacity = Tween<double>(begin: 1, end: 0)
-        .chain(CurveTween(curve: const Interval(0.0, 0.35)))
+        .chain(CurveTween(curve: const Interval(0.0, 0.70, curve: Curves.easeIn)))
         .animate(anim);
     return FadeTransition(opacity: opacity, child: child);
   }
@@ -243,25 +243,25 @@ class _Zoom extends StatelessWidget {
     );
   }
 
-  /// Page appearing: scale up to rest + fade in (late, 0.3→1.0).
+  /// Page appearing: scale up to rest + fade in (late, 0.1→1.0).
   Widget _enter(Animation<double> anim, Widget child, {required bool reverse}) {
     final begin = reverse ? _exitTo : _enterFrom;
     final scale = Tween<double>(begin: begin, end: 1.0)
         .chain(CurveTween(curve: AppMotion.curve))
         .animate(anim);
     final opacity =
-        CurveTween(curve: const Interval(0.30, 1.0)).animate(anim);
+        CurveTween(curve: const Interval(0.10, 1.0, curve: Curves.easeOut)).animate(anim);
     return _scaleFade(scale, opacity, child);
   }
 
-  /// Page leaving: scale away from rest + fade out (early, 0→0.3).
+  /// Page leaving: scale away from rest + fade out (early, 0→0.7).
   Widget _exit(Animation<double> anim, Widget child, {required bool reverse}) {
     final end = reverse ? _enterFrom : _exitTo;
     final scale = Tween<double>(begin: 1.0, end: end)
         .chain(CurveTween(curve: AppMotion.curve))
         .animate(anim);
     final opacity = Tween<double>(begin: 1, end: 0)
-        .chain(CurveTween(curve: const Interval(0.0, 0.30)))
+        .chain(CurveTween(curve: const Interval(0.0, 0.70, curve: Curves.easeIn)))
         .animate(anim);
     return _scaleFade(scale, opacity, child);
   }

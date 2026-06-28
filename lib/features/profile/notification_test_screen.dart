@@ -8,6 +8,7 @@ import '../../app/core/app_toast.dart';
 import '../../app/data/services/notification_service.dart';
 import '../../app/data/services/notifications/notif_platform.dart';
 import '../../app/data/services/permission_service.dart';
+import '../../app/data/services/security_service.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
 import '../../app/widgets/common_widgets.dart';
@@ -250,6 +251,10 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
             const SectionHeader('PAYLOAD INSPECTION'),
             const SizedBox(height: 10),
             _buildPayloadInspectorCard(),
+            const SizedBox(height: 20),
+            const SectionHeader('SECURITY & POLICY TESTING'),
+            const SizedBox(height: 10),
+            _buildSecurityTestingCard(),
             const SizedBox(height: 20),
             const SectionHeader('OEM COMPATIBILITY & TROUBLESHOOTING'),
             const SizedBox(height: 10),
@@ -542,6 +547,100 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
         const SizedBox(height: 2),
         Text(desc, style: AppTextStyles.body2.copyWith(fontSize: 12)),
       ],
+    );
+  }
+
+  Widget _buildSecurityTestingCard() {
+    final sec = SecurityService.to;
+    return AppCard(
+      child: Obx(() {
+        final deviceBanned = sec.isDeviceBanned();
+        final emailBanned = sec.isUserBanned('demo@squadup.gg');
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              '🔒 Anti-Hack & Policy Controls',
+              style: AppTextStyles.body1.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
+            ),
+            const SizedBox(height: 12),
+            _buildSpecRow('Your Device ID', sec.deviceId.value),
+            const Divider(height: 20),
+            _buildSpecRow('Linked Account', sec.linkedUserEmail.value.isEmpty ? 'NONE (Register/Login to link)' : sec.linkedUserEmail.value),
+            const Divider(height: 24),
+            
+            // Switch for Device Ban
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Ban This Device', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('Blocks app boot immediately', style: TextStyle(color: Colors.grey.shade400, fontSize: 11)),
+                  ],
+                ),
+                Switch.adaptive(
+                  value: deviceBanned,
+                  onChanged: (val) async {
+                    await sec.banCurrentDevice(val);
+                    setState(() {});
+                    AppToast.info(val ? 'Device Banned! Boot will be blocked.' : 'Device Unbanned!');
+                  },
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            
+            // Switch for User Ban
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Ban Demo User', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('Bans demo@squadup.gg account', style: TextStyle(color: Colors.grey.shade400, fontSize: 11)),
+                  ],
+                ),
+                Switch.adaptive(
+                  value: emailBanned,
+                  onChanged: (val) async {
+                    await sec.banUserEmail('demo@squadup.gg', val);
+                    setState(() {});
+                    AppToast.info(val ? 'Demo Account Banned!' : 'Demo Account Unbanned!');
+                  },
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            
+            // Button to Reset linking
+            ElevatedButton.icon(
+              onPressed: sec.linkedUserEmail.value.isEmpty 
+                ? null 
+                : () async {
+                    await sec.clearDeviceLink();
+                    setState(() {});
+                    AppToast.success('Linked account cleared! You can now log into a different email.');
+                  },
+              icon: const Icon(Icons.link_off_rounded),
+              label: const Text('Reset Account Linking (Clear Link)'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Enforces the "One Device, One Account" policy. Click clear to test logging into a different account on this device.',
+              style: AppTextStyles.body2.copyWith(fontSize: 11, fontStyle: FontStyle.italic),
+            ),
+          ],
+        );
+      }),
     );
   }
 }

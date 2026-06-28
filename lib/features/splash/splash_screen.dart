@@ -3,12 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../app/core/app_constants.dart';
 import '../../app/data/services/session_service.dart';
+import '../../app/data/services/security_service.dart';
 import '../../app/routes/app_routes.dart';
-import '../../app/data/services/permission_service.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
 
-/// Boot screen — shows the brand, then routes to the shell (if logged in) or login.
+enum SecurityStatus {
+  scanning,
+  passed,
+  failedRoot,
+  failedNetwork,
+  failedIntegrity,
+  failedBan,
+}
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -16,132 +24,385 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with TickerProviderStateMixin {
-  // One-shot brand intro: the logo (and wordmark) fade in while scaling up from
-  // 85% — premium and calm, not flashy. easeOutCubic decelerates into place.
-  late final AnimationController _intro = AnimationController(
+class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
+  // Logo intro animation
+  late final AnimationController _logoController = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 650),
+    duration: const Duration(milliseconds: 700),
   );
-  late final Animation<double> _introFade =
-      CurvedAnimation(parent: _intro, curve: Curves.easeOutCubic);
-  late final Animation<double> _introScale = Tween<double>(begin: 0.85, end: 1.0)
+  late final Animation<double> _logoFade = CurvedAnimation(parent: _logoController, curve: Curves.easeOutCubic);
+  late final Animation<double> _logoScale = Tween<double>(begin: 0.82, end: 1.0)
       .chain(CurveTween(curve: Curves.easeOutCubic))
-      .animate(_intro);
+      .animate(_logoController);
 
-  // Continuous heartbeat on the accent diamond.
-  late final AnimationController _pulse = AnimationController(
+  // Terminal console fade animation
+  late final AnimationController _terminalController = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 900),
-  )..repeat(reverse: true);
+    duration: const Duration(milliseconds: 500),
+  );
+  late final Animation<double> _terminalFade = CurvedAnimation(parent: _terminalController, curve: Curves.easeIn);
+
+  final RxList<String> _visibleLogs = <String>[].obs;
+  final Rx<SecurityStatus> _status = SecurityStatus.scanning.obs;
+  final RxDouble _progress = 0.0.obs;
+  final RxString _failureMessage = ''.obs;
 
   @override
   void initState() {
     super.initState();
-    _intro.forward();
-    _boot();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      PermissionService.to.requestAll();
+    _logoController.forward().then((_) {
+      _terminalController.forward();
+      _runSecurityChecks();
     });
-  }
-
-  /// Restore a saved session (if any) while the splash animation plays, then
-  /// route to the shell or login.
-  Future<void> _boot() async {
-    // Keep the splash visible long enough to (a) play the logo intro and (b)
-    // survive the slow first frame on a cold start (shader warm-up + profile
-    // install can stall the very first frames), then route. 1200ms guarantees
-    // the square-logo splash is actually seen, while still being noticeably
-    // faster than the old flat 1600ms. Auto-login (~200ms) runs in parallel.
-    final results = await Future.wait([
-      SessionService.to.tryAutoLogin(),
-      Future.delayed(const Duration(milliseconds: 1200)),
-    ]);
-    if (!mounted) return;
-    final loggedIn = results[0] == true;
-    Get.offAllNamed(loggedIn ? AppRoutes.shell : AppRoutes.login);
   }
 
   @override
   void dispose() {
-    _intro.dispose();
-    _pulse.dispose();
+    _logoController.dispose();
+    _terminalController.dispose();
     super.dispose();
+  }
+
+  /// Simulation + real checks running step-by-step
+  Future<void> _runSecurityChecks() async {
+    final sec = SecurityService.to;
+    _visibleLogs.clear();
+    _status.value = SecurityStatus.scanning;
+    _progress.value = 0.0;
+
+    const delay = Duration(milliseconds: 400);
+
+    // Helper to add log and increment progress
+    Future<void> logStep(String msg, double p) async {
+      _visibleLogs.add(msg);
+      _progress.value = p;
+      await Future.delayed(delay);
+    }
+
+    await logStep('⚡ [INFO] Init SquadUp Secure Shield v1.0.2...', 0.1);
+
+    // 1. Network check
+    await logStep('📡 [SEC] Checking internet connection...', 0.25);
+    final hasNet = await sec.hasInternetConnection();
+    if (!hasNet) {
+      _visibleLogs.add('❌ [FAIL] Network offline! Action blocked.');
+      _status.value = SecurityStatus.failedNetwork;
+      _failureMessage.value = 'Internet connection required to verify tournament integrity. Please connect to Wi-Fi/data.';
+      return;
+    }
+    _visibleLogs.add('✅ [OK] Connection secure.');
+    await Future.delayed(const Duration(milliseconds: 150));
+
+    // 2. Root check
+    await logStep('🔒 [SEC] Scanning for SU binaries & Root access...', 0.45);
+    final isRooted = await sec.isDeviceRooted();
+    if (isRooted) {
+      _visibleLogs.add('⚠️ [ALERT] ROOT ACCESS DETECTED! Device compromised.');
+      _status.value = SecurityStatus.failedRoot;
+      _failureMessage.value = 'Rooted or custom ROM devices are not allowed in SquadUp Tournaments to prevent scripting and hacks. Code: SQ-SEC-ROOT';
+      return;
+    }
+    _visibleLogs.add('✅ [OK] Sandbox secure.');
+    await Future.delayed(const Duration(milliseconds: 150));
+
+    // 3. Application Integrity
+    await logStep('🛡️ [SEC] Verifying package signature integrity...', 0.65);
+    final integrityPassed = await sec.verifyAppIntegrity();
+    if (!integrityPassed) {
+      _visibleLogs.add('❌ [FAIL] APK Signature verification failed! Mod detected.');
+      _status.value = SecurityStatus.failedIntegrity;
+      _failureMessage.value = 'This app has been modified or re-signed. Running modified clients is strictly prohibited. Please download the official app.';
+      return;
+    }
+    _visibleLogs.add('✅ [OK] Signature valid.');
+    await Future.delayed(const Duration(milliseconds: 150));
+
+    // 4. Device Account limit & Ban status
+    await logStep('👤 [SEC] Verifying device and ban status...', 0.85);
+    
+    // Check if device is banned
+    if (sec.isDeviceBanned()) {
+      _visibleLogs.add('❌ [BANNED] Device banned for policy violations.');
+      _status.value = SecurityStatus.failedBan;
+      _failureMessage.value = 'This device (ID: ${sec.deviceId.value}) is banned due to code violations or toxic behavior. Code: SQ-BAN-DEV';
+      return;
+    }
+
+    // Check if currently logged in user (if any) is banned
+    final session = SessionService.to;
+    final currentUser = session.user.value;
+    if (currentUser != null && sec.isUserBanned(currentUser.email)) {
+      _visibleLogs.add('❌ [BANNED] User account is banned.');
+      _status.value = SecurityStatus.failedBan;
+      _failureMessage.value = 'Your account (${currentUser.email}) has been banned from SquadUp Tournaments. Code: SQ-BAN-USER';
+      return;
+    }
+    
+    _visibleLogs.add('✅ [OK] Device registered & active.');
+    await Future.delayed(const Duration(milliseconds: 150));
+
+    // 5. Finalizing boot
+    await logStep('⚙️ [BOOT] Initializing tournament environment...', 1.0);
+    _status.value = SecurityStatus.passed;
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // Normal routing
+    final loggedIn = await session.tryAutoLogin();
+    // Double check email ban if logged in
+    if (loggedIn && session.user.value != null) {
+      if (sec.isUserBanned(session.user.value!.email)) {
+        _status.value = SecurityStatus.failedBan;
+        _failureMessage.value = 'Your account has been banned from SquadUp Tournaments. Code: SQ-BAN-USER';
+        return;
+      }
+    }
+    Get.offAllNamed(loggedIn ? AppRoutes.shell : AppRoutes.login);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgAlt,
-      body: Center(
-        child: FadeTransition(
-          opacity: _introFade,
-          child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ScaleTransition(
-              scale: _introScale,
-              child: Container(
-                padding: const EdgeInsets.all(30),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.winningTeal.withValues(alpha: 0.25),
-                      Colors.transparent,
-                    ],
+      backgroundColor: AppColors.bg,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Obx(() {
+              final status = _status.value;
+              final isFailed = status != SecurityStatus.scanning && status != SecurityStatus.passed;
+
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo & Brand intro
+                  FadeTransition(
+                    opacity: _logoFade,
+                    child: ScaleTransition(
+                      scale: _logoScale,
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  isFailed 
+                                      ? AppColors.danger.withValues(alpha: 0.18)
+                                      : AppColors.primary.withValues(alpha: 0.18),
+                                  Colors.transparent,
+                                ],
+                              ),
+                            ),
+                            child: Hero(
+                              tag: 'brand-logo',
+                              child: Image.asset(
+                                AppConstants.logo,
+                                width: 110,
+                                height: 110,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            AppConstants.appName,
+                            style: AppTextStyles.h1.copyWith(
+                              color: isFailed ? AppColors.danger : Colors.white,
+                              fontSize: 28,
+                            ),
+                          ),
+                          Text(
+                            isFailed ? 'SHIELD BLOCKED' : 'TOURNAMENT SYSTEM',
+                            style: AppTextStyles.label.copyWith(
+                              color: isFailed ? AppColors.danger : AppColors.gold,
+                              letterSpacing: 4,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                // Hero tag preserved ('brand-logo') so the Splash→Login shared
-                // element keeps working. The intro scale/fade above wraps it and
-                // has fully settled (≈800ms) before navigation (≈1600ms), so the
-                // Hero lifts off cleanly with no scale fighting the flight.
-                // Square logo shown in full (BoxFit.contain) — no round mask /
-                // crop. The surrounding circle is only a soft glow halo, not a
-                // clip, so the logo keeps its original square shape.
-                child: Hero(
-                  tag: 'brand-logo',
-                  child: Image.asset(AppConstants.logo,
-                      width: 150,
-                      height: 150,
-                      fit: BoxFit.contain,
-                      cacheWidth: 400),
-                ),
-              ),
-            ),
-            const SizedBox(height: 30),
-            const Text(AppConstants.appName, style: AppTextStyles.h1),
-            const SizedBox(height: 8),
-            Text(AppConstants.tagline,
-                style: AppTextStyles.body1.copyWith(
-                    color: AppColors.textSecondary, letterSpacing: 4)),
-            const SizedBox(height: 50),
-            ScaleTransition(
-              scale: Tween(begin: 0.7, end: 1.1).animate(
-                CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
-              ),
-              child: Transform.rotate(
-                angle: 0.785398, // 45° → diamond
-                child: Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: AppColors.winningTeal,
-                    borderRadius: BorderRadius.circular(3),
-                    boxShadow: [
-                      BoxShadow(
-                          color: AppColors.winningTeal.withValues(alpha: 0.6),
-                          blurRadius: 12),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
+                  const SizedBox(height: 36),
+
+                  // Show error warning if failed, else show scanning terminal
+                  if (isFailed)
+                    _buildSecurityAlertCard()
+                  else
+                    FadeTransition(
+                      opacity: _terminalFade,
+                      child: _buildConsoleTerminal(),
+                    ),
+                ],
+              );
+            }),
           ),
         ),
       ),
+    );
+  }
+
+  /// The premium terminal scanning screen
+  Widget _buildConsoleTerminal() {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          height: 180,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.bgAlt,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Terminal Title Bar
+              Row(
+                children: [
+                  Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle)),
+                  const SizedBox(width: 5),
+                  Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.yellow, shape: BoxShape.circle)),
+                  const SizedBox(width: 5),
+                  Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)),
+                  const SizedBox(width: 12),
+                  Text(
+                    'SECURITY_SHELL.sh',
+                    style: TextStyle(
+                      fontFamily: 'Courier',
+                      color: Colors.white.withValues(alpha: 0.5),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(color: AppColors.border, height: 16),
+              // Logs list
+              Expanded(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _visibleLogs.length,
+                  itemBuilder: (context, index) {
+                    final log = _visibleLogs[index];
+                    Color logColor = Colors.greenAccent;
+                    if (log.contains('❌') || log.contains('FAIL')) {
+                      logColor = AppColors.danger;
+                    } else if (log.contains('⚠️') || log.contains('ALERT')) {
+                      logColor = AppColors.gold;
+                    } else if (log.contains('⚡')) {
+                      logColor = Colors.blueAccent;
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 5.0),
+                      child: Text(
+                        log,
+                        style: TextStyle(
+                          fontFamily: 'Courier',
+                          color: logColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        // Premium linear progress bar
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: SizedBox(
+            height: 5,
+            child: LinearProgressIndicator(
+              value: _progress.value,
+              backgroundColor: AppColors.border,
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'Securing device connection... ${(_progress.value * 100).toInt()}%',
+          style: AppTextStyles.body2.copyWith(fontSize: 12, color: AppColors.textSecondary),
+        ),
+      ],
+    );
+  }
+
+  /// Access violation block screen
+  Widget _buildSecurityAlertCard() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.danger.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.danger.withValues(alpha: 0.35)),
+          ),
+          child: Column(
+            children: [
+              const Icon(
+                Icons.gpp_bad_rounded,
+                color: AppColors.danger,
+                size: 52,
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'ACCESS DENIED',
+                style: AppTextStyles.h2.copyWith(color: AppColors.danger, fontSize: 18),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                _failureMessage.value,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.body1.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.5,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        // Retry/Fix Button
+        ElevatedButton.icon(
+          onPressed: _runSecurityChecks,
+          icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+          label: const Text('RE-SCAN SYSTEM', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.danger,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Back / Cancel
+        OutlinedButton(
+          onPressed: () {
+            // Closes application
+            Get.back();
+          },
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: Text(
+            'EXIT',
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
     );
   }
 }
