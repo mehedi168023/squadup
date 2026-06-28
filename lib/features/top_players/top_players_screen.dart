@@ -30,7 +30,7 @@ class _TopPlayersScreenState extends State<TopPlayersScreen> {
         1 => AppColors.gold,
         2 => AppColors.silver,
         3 => AppColors.bronze,
-        _ => AppColors.textSecondary,
+        _ => context.cTextDim,
       };
 
   @override

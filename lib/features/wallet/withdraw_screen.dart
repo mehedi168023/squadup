@@ -128,15 +128,15 @@ class WithdrawScreen extends StatelessWidget {
               ],
               onSubmitted: (_) => c.submit(),
               style: AppTextStyles.body1,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Amount',
                 prefixIcon: Padding(
-                  padding: EdgeInsets.only(left: 16, right: 8),
+                  padding: const EdgeInsets.only(left: 16, right: 8),
                   child: Text(AppConstants.currency,
                       style: TextStyle(
-                          fontSize: 20, color: AppColors.textSecondary)),
+                          fontSize: 20, color: context.cTextDim)),
                 ),
-                prefixIconConstraints: BoxConstraints(minWidth: 0),
+                prefixIconConstraints: const BoxConstraints(minWidth: 0),
               ),
             ),
             const SizedBox(height: 8),

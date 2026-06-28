@@ -35,15 +35,15 @@ class AppColors {
   static const Color textSecondary = Color(0xFF8A93A5);
   static const Color textMuted = Color(0xFF5E6878);
 
-  // Light theme
-  static const Color lightBg = Color(0xFFF4F6FB);
-  static const Color lightBgAlt = Color(0xFFE9EEF6);
+  // Light theme (polished with high-contrast slate colors for perfect readability)
+  static const Color lightBg = Color(0xFFF8FAFC);
+  static const Color lightBgAlt = Color(0xFFF1F5F9);
   static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightSurfaceAlt = Color(0xFFEEF2F8);
-  static const Color lightBorder = Color(0xFFDDE3EE);
-  static const Color lightTextPrimary = Color(0xFF0E1726);
-  static const Color lightTextSecondary = Color(0xFF5B6678);
-  static const Color lightTextMuted = Color(0xFF94A0B3);
+  static const Color lightSurfaceAlt = Color(0xFFEEF2F6);
+  static const Color lightBorder = Color(0xFFCBD5E1);
+  static const Color lightTextPrimary = Color(0xFF0F172A);
+  static const Color lightTextSecondary = Color(0xFF334155);
+  static const Color lightTextMuted = Color(0xFF64748B);
 
   // Gradients
   static const List<Color> greenGradient = [
