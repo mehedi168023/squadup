@@ -12,6 +12,9 @@ class SecurityService extends GetxService {
   final RxString deviceId = ''.obs;
   final RxString linkedUserEmail = ''.obs;
 
+  static const String baseUrl = 'http://localhost:8080/squadup_backend/api.php';
+  final GetConnect _connect = GetConnect(timeout: const Duration(seconds: 10));
+
   @override
   Future<void> onInit() async {
     super.onInit();
@@ -138,6 +141,19 @@ class SecurityService extends GetxService {
     await _prefs.remove('sq_linked_user');
     linkedUserEmail.value = '';
     AppLogger.info('SecurityService', 'Device registration limit cleared.');
+    try {
+      final userId = _prefs.getInt('sq_user_id') ?? 0;
+      if (userId > 0) {
+        await _connect.post(
+          '$baseUrl?action=clear_device_link',
+          {
+            'user_id': userId,
+          },
+        );
+      }
+    } catch (e) {
+      AppLogger.error('SecurityService', 'clearDeviceLink API error: $e');
+    }
   }
 
   /// Checks if this device has been banned.
@@ -150,15 +166,75 @@ class SecurityService extends GetxService {
     return _prefs.getBool('sq_banned_user_${email.toLowerCase()}') ?? false;
   }
 
+  /// Network-backed: Checks if this device is banned.
+  Future<bool> checkDeviceBan() async {
+    try {
+      final response = await _connect.get('$baseUrl?action=check_device_ban&device_id=${deviceId.value}');
+      if (response.isOk && response.body != null) {
+        final res = response.body;
+        if (res['status'] == 'success') {
+          final banned = res['banned'] == true || res['banned'] == 1;
+          await _prefs.setBool('sq_banned_device_${deviceId.value}', banned);
+          return banned;
+        }
+      }
+    } catch (e) {
+      AppLogger.error('SecurityService', 'checkDeviceBan error: $e');
+    }
+    return isDeviceBanned();
+  }
+
+  /// Network-backed: Checks if the user is banned.
+  Future<bool> checkUserBan(String email) async {
+    try {
+      final response = await _connect.get('$baseUrl?action=get_profile&user_id=0&email=$email');
+      if (response.isOk && response.body != null) {
+        final res = response.body;
+        if (res['status'] == 'success') {
+          final banned = res['user']['status'] == 'banned';
+          await _prefs.setBool('sq_banned_user_${email.toLowerCase()}', banned);
+          return banned;
+        }
+      }
+    } catch (e) {
+      AppLogger.error('SecurityService', 'checkUserBan error: $e');
+    }
+    return isUserBanned(email);
+  }
+
   /// Admin Simulation: Bans the current device.
   Future<void> banCurrentDevice(bool ban) async {
     await _prefs.setBool('sq_banned_device_${deviceId.value}', ban);
     AppLogger.info('SecurityService', 'Banned status updated for device: ${deviceId.value} -> $ban');
+    try {
+      await _connect.post(
+        '$baseUrl?action=toggle_ban',
+        {
+          'target': 'device',
+          'value': deviceId.value,
+          'ban': ban ? 1 : 0,
+        },
+      );
+    } catch (e) {
+      AppLogger.error('SecurityService', 'banCurrentDevice API error: $e');
+    }
   }
 
   /// Admin Simulation: Bans a specific user email.
   Future<void> banUserEmail(String email, bool ban) async {
     await _prefs.setBool('sq_banned_user_${email.toLowerCase()}', ban);
     AppLogger.info('SecurityService', 'Banned status updated for user: $email -> $ban');
+    try {
+      await _connect.post(
+        '$baseUrl?action=toggle_ban',
+        {
+          'target': 'user',
+          'value': email,
+          'ban': ban ? 1 : 0,
+        },
+      );
+    } catch (e) {
+      AppLogger.error('SecurityService', 'banUserEmail API error: $e');
+    }
   }
 }

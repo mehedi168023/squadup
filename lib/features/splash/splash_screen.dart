@@ -122,7 +122,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     await logStep('👤 [SEC] Verifying device and ban status...', 0.85);
     
     // Check if device is banned
-    if (sec.isDeviceBanned()) {
+    final devBanned = await sec.checkDeviceBan();
+    if (devBanned) {
       _visibleLogs.add('❌ [BANNED] Device banned for policy violations.');
       _status.value = SecurityStatus.failedBan;
       _failureMessage.value = 'This device (ID: ${sec.deviceId.value}) is banned due to code violations or toxic behavior. Code: SQ-BAN-DEV';
@@ -132,11 +133,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     // Check if currently logged in user (if any) is banned
     final session = SessionService.to;
     final currentUser = session.user.value;
-    if (currentUser != null && sec.isUserBanned(currentUser.email)) {
-      _visibleLogs.add('❌ [BANNED] User account is banned.');
-      _status.value = SecurityStatus.failedBan;
-      _failureMessage.value = 'Your account (${currentUser.email}) has been banned from SquadUp Tournaments. Code: SQ-BAN-USER';
-      return;
+    if (currentUser != null) {
+      final userBanned = await sec.checkUserBan(currentUser.email);
+      if (userBanned) {
+        _visibleLogs.add('❌ [BANNED] User account is banned.');
+        _status.value = SecurityStatus.failedBan;
+        _failureMessage.value = 'Your account (${currentUser.email}) has been banned from SquadUp Tournaments. Code: SQ-BAN-USER';
+        return;
+      }
     }
     
     _visibleLogs.add('✅ [OK] Device registered & active.');
@@ -151,7 +155,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     final loggedIn = await session.tryAutoLogin();
     // Double check email ban if logged in
     if (loggedIn && session.user.value != null) {
-      if (sec.isUserBanned(session.user.value!.email)) {
+      final userBanned = await sec.checkUserBan(session.user.value!.email);
+      if (userBanned) {
         _status.value = SecurityStatus.failedBan;
         _failureMessage.value = 'Your account has been banned from SquadUp Tournaments. Code: SQ-BAN-USER';
         return;

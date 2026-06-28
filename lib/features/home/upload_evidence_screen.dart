@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../app/core/app_toast.dart';
+import '../../app/data/services/session_service.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_text_styles.dart';
@@ -63,7 +64,9 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
     AppToast.info('Pasted Room ID: $text');
   }
 
-  void _submit() {
+  bool _submitting = false;
+
+  Future<void> _submit() async {
     if (_pickedFile == null) {
       AppToast.warning('আগে স্ক্রিনশট আপলোড করুন');
       return;
@@ -72,8 +75,24 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
       AppToast.warning('Room ID দিন');
       return;
     }
-    Get.back();
-    AppToast.success('Evidence submitted — under review');
+    setState(() => _submitting = true);
+    
+    final args = Get.arguments;
+    final int matchId = (args is int) 
+        ? args 
+        : ((args is Map && args.containsKey('matchId')) 
+            ? args['matchId'] 
+            : 1);
+
+    final ok = await SessionService.to.submitEvidence(
+      matchId: matchId,
+      roomId: _roomId.text.trim(),
+      file: _pickedFile!,
+    );
+    setState(() => _submitting = false);
+    if (ok) {
+      Get.back();
+    }
   }
 
   @override
@@ -84,17 +103,18 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _UploadBox(pickedFile: _pickedFile, onTap: _pickImage),
+            _UploadBox(pickedFile: _pickedFile, onTap: _submitting ? () {} : _pickImage),
             const SizedBox(height: AppSpacing.lg),
             TextField(
               controller: _roomId,
+              enabled: !_submitting,
               style: AppTextStyles.body1.copyWith(fontSize: 16),
               decoration: InputDecoration(
                 hintText: 'Room ID',
                 fillColor: context.cSurface,
                 suffixIcon: IconButton(
                   tooltip: 'Paste',
-                  onPressed: _paste,
+                  onPressed: _submitting ? null : _paste,
                   icon: const Icon(Icons.content_paste_rounded,
                       color: AppColors.primary),
                 ),
@@ -102,10 +122,10 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
             ),
             const SizedBox(height: AppSpacing.lg),
             PrimaryButton(
-              label: 'SUBMIT',
-              icon: Icons.check_rounded,
+              label: _submitting ? 'SUBMITTING...' : 'SUBMIT',
+              icon: _submitting ? null : Icons.check_rounded,
               variant: ButtonVariant.green,
-              onPressed: _submit,
+              onPressed: _submitting ? null : _submit,
             ),
             const SizedBox(height: AppSpacing.xl),
             _note(context, 'স্ক্রিনশট আপলোড না করলে আপনি প্রাইজ পাবেন না।'),

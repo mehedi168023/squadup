@@ -22,8 +22,13 @@ class OrderHistoryScreen extends StatefulWidget {
 }
 
 class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
-  // null = All; otherwise filter by kind.
   OrderKind? _filter;
+
+  @override
+  void initState() {
+    super.initState();
+    SessionService.to.fetchOrders();
+  }
 
   @override
   Widget build(BuildContext context) {
