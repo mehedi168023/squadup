@@ -15,6 +15,7 @@ dependencies:
   onesignal_flutter: ^5.2.0
   url_launcher: ^6.3.0
   permission_handler: ^11.3.1 # notification + file/media permission requests
+  lottie: ^3.3.3
   # All backend/network dependencies were removed — the app now runs entirely
   # on local mock data. Removed on purpose (don't re-add):
   #  - dio, socket_io_client, firebase_core, firebase_messaging,
@@ -60,6 +61,8 @@ flutter:
     - assets/images/banner_admoney.webp
     - assets/images/banner_howtoplay.webp
     - assets/images/banner_joingroup.webp
+    - assets/images/gaming_pad.json
+    - assets/images/glow_loading.json
 
   fonts:
     # Display font is only ever used at w800 (see AppTextStyles), so only the

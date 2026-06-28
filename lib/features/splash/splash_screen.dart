@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lottie/lottie.dart';
 import '../../app/core/app_constants.dart';
 import '../../app/data/services/session_service.dart';
 import '../../app/data/services/security_service.dart';
@@ -226,13 +227,13 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   ),
                   const SizedBox(height: 36),
 
-                  // Show error warning if failed, else show scanning terminal
+                  // Show error warning if failed, else show premium Lottie loader
                   if (isFailed)
                     _buildSecurityAlertCard()
                   else
                     FadeTransition(
                       opacity: _terminalFade,
-                      child: _buildConsoleTerminal(),
+                      child: _buildLottieLoader(),
                     ),
                 ],
               );
@@ -243,75 +244,23 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     );
   }
 
-  /// The premium terminal scanning screen
-  Widget _buildConsoleTerminal() {
+  String get _statusText {
+    final p = _progress.value;
+    if (p < 0.25) return 'Initializing security shield...';
+    if (p < 0.45) return 'Checking internet connection...';
+    if (p < 0.65) return 'Scanning sandbox environment...';
+    if (p < 0.85) return 'Verifying client integrity...';
+    return 'Entering arena...';
+  }
+
+  Widget _buildLottieLoader() {
     return Column(
       children: [
-        Container(
-          width: double.infinity,
-          height: 180,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppColors.bgAlt,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Terminal Title Bar
-              Row(
-                children: [
-                  Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle)),
-                  const SizedBox(width: 5),
-                  Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.yellow, shape: BoxShape.circle)),
-                  const SizedBox(width: 5),
-                  Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)),
-                  const SizedBox(width: 12),
-                  Text(
-                    'SECURITY_SHELL.sh',
-                    style: TextStyle(
-                      fontFamily: 'Courier',
-                      color: Colors.white.withValues(alpha: 0.5),
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-              const Divider(color: AppColors.border, height: 16),
-              // Logs list
-              Expanded(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _visibleLogs.length,
-                  itemBuilder: (context, index) {
-                    final log = _visibleLogs[index];
-                    Color logColor = Colors.greenAccent;
-                    if (log.contains('❌') || log.contains('FAIL')) {
-                      logColor = AppColors.danger;
-                    } else if (log.contains('⚠️') || log.contains('ALERT')) {
-                      logColor = AppColors.gold;
-                    } else if (log.contains('⚡')) {
-                      logColor = Colors.blueAccent;
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 5.0),
-                      child: Text(
-                        log,
-                        style: TextStyle(
-                          fontFamily: 'Courier',
-                          color: logColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+        Lottie.asset(
+          'assets/images/gaming_pad.json',
+          width: 140,
+          height: 140,
+          fit: BoxFit.contain,
         ),
         const SizedBox(height: 24),
         // Premium linear progress bar
@@ -319,6 +268,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
           borderRadius: BorderRadius.circular(10),
           child: SizedBox(
             height: 5,
+            width: 240,
             child: LinearProgressIndicator(
               value: _progress.value,
               backgroundColor: AppColors.border,
@@ -326,10 +276,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
             ),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Text(
-          'Securing device connection... ${(_progress.value * 100).toInt()}%',
-          style: AppTextStyles.body2.copyWith(fontSize: 12, color: AppColors.textSecondary),
+          _statusText,
+          style: AppTextStyles.body2.copyWith(
+            fontSize: 12, 
+            color: AppColors.textSecondary,
+            letterSpacing: 0.5,
+          ),
         ),
       ],
     );
