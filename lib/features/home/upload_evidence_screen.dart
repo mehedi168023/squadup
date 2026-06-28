@@ -1,11 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import '../../app/widgets/premium_back_button.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../app/core/app_toast.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_text_styles.dart';
+import '../../app/widgets/premium_back_button.dart';
 import '../../app/widgets/primary_button.dart';
 import '../../app/widgets/responsive.dart';
 
@@ -20,7 +22,7 @@ class UploadEvidenceScreen extends StatefulWidget {
 
 class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
   final _roomId = TextEditingController();
-  bool _attached = false;
+  File? _pickedFile;
 
   @override
   void dispose() {
@@ -28,11 +30,26 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
     super.dispose();
   }
 
-  // Image-picking is simulated here (no native picker dependency). Wire up
-  // image_picker later to attach a real file.
-  void _pickImage() {
-    setState(() => _attached = true);
-    AppToast.success('Screenshot attached');
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    try {
+      final file = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 45, // Automatic native compression to ~45% quality (highly readable but small size)
+      );
+      if (file != null) {
+        final localFile = File(file.path);
+        final sizeKb = await localFile.length() / 1024;
+        setState(() {
+          _pickedFile = localFile;
+        });
+        AppToast.success('Screenshot attached (${sizeKb.toStringAsFixed(1)} KB)');
+      }
+    } catch (e) {
+      AppToast.error('Error selecting image: $e');
+    }
   }
 
   Future<void> _paste() async {
@@ -47,7 +64,7 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
   }
 
   void _submit() {
-    if (!_attached) {
+    if (_pickedFile == null) {
       AppToast.warning('আগে স্ক্রিনশট আপলোড করুন');
       return;
     }
@@ -67,7 +84,7 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _UploadBox(attached: _attached, onTap: _pickImage),
+            _UploadBox(pickedFile: _pickedFile, onTap: _pickImage),
             const SizedBox(height: AppSpacing.lg),
             TextField(
               controller: _roomId,
@@ -124,12 +141,13 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
 }
 
 class _UploadBox extends StatelessWidget {
-  final bool attached;
+  final File? pickedFile;
   final VoidCallback onTap;
-  const _UploadBox({required this.attached, required this.onTap});
+  const _UploadBox({required this.pickedFile, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final attached = pickedFile != null;
     final color = attached ? AppColors.matchesGreen : AppColors.primary;
     return GestureDetector(
       onTap: onTap,
@@ -141,24 +159,60 @@ class _UploadBox extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(color: color.withValues(alpha: 0.6), width: 1.6),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-                attached
-                    ? Icons.check_circle_rounded
-                    : Icons.add_photo_alternate_outlined,
-                size: 56,
-                color: color),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-                attached
-                    ? 'Screenshot attached — tap to change'
-                    : 'Click here to upload image',
-                style: AppTextStyles.title
-                    .copyWith(fontSize: 14, color: context.cTextDim)),
-          ],
-        ),
+        clipBehavior: Clip.antiAlias,
+        child: attached
+            ? Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.file(
+                    pickedFile!,
+                    fit: BoxFit.cover,
+                  ),
+                  Container(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          size: 48,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Screenshot attached — tap to change',
+                          style: AppTextStyles.title.copyWith(
+                            fontSize: 13,
+                            color: Colors.white,
+                            shadows: [
+                              const Shadow(
+                                color: Colors.black54,
+                                offset: Offset(0, 1),
+                                blurRadius: 4,
+                              )
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                      Icons.add_photo_alternate_outlined,
+                      size: 56,
+                      color: color),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                      'Click here to upload image',
+                      style: AppTextStyles.title
+                          .copyWith(fontSize: 14, color: context.cTextDim)),
+                ],
+              ),
       ),
     );
   }
