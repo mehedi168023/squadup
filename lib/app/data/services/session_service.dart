@@ -23,7 +23,14 @@ import './security_service.dart';
 class SessionService extends GetxService {
   static SessionService get to => Get.find();
 
-  static const String baseUrl = 'http://127.0.0.1:8080/squadup_backend/api.php';
+  static String get baseUrl {
+    if (GetPlatform.isWeb) {
+      final host = Uri.base.host;
+      final cleanHost = host.isEmpty ? '127.0.0.1' : host;
+      return 'http://$cleanHost:8080/squadup_backend/api.php';
+    }
+    return 'http://127.0.0.1:8080/squadup_backend/api.php';
+  }
   final GetConnect _connect = GetConnect(timeout: const Duration(seconds: 10));
 
   final Rxn<UserModel> user = Rxn<UserModel>();
