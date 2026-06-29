@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../app/core/app_constants.dart';
-import '../../app/data/mock/mock_data.dart';
+import '../../app/data/services/session_service.dart';
 import '../../app/routes/app_routes.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_text_styles.dart';
@@ -15,6 +14,7 @@ class ShopScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final session = SessionService.to;
     return Scaffold(
       appBar: const BrandAppBar(),
       body: ResponsiveCenter(
@@ -22,13 +22,12 @@ class ShopScreen extends StatelessWidget {
           // Clear the floating bottom nav bar (shell uses extendBody: true).
           padding: EdgeInsets.fromLTRB(
               12, 12, 12, MediaQuery.of(context).padding.bottom + 84),
-          children: const [
-            PromoBanner(banners: MockData.shopBanners),
-            SizedBox(height: 14),
-            // Free Fire Topup · Ludo Kingpass · Gaming Store as a 2-column grid.
-            SectionHeader('STORE'),
-            SizedBox(height: 14),
-            _StoreGrid(),
+          children: [
+            Obx(() => PromoBanner(banners: session.shopBanners.toList())),
+            const SizedBox(height: 14),
+            const SectionHeader('STORE'),
+            const SizedBox(height: 14),
+            const _StoreGrid(),
           ],
         ),
       ),
@@ -43,39 +42,34 @@ class _StoreGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ff = MockData.topupCategories[0];
-    final kingpass = MockData.topupCategories[1];
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 0.95,
-      children: [
-        _StoreTile(
-          image: ff.image,
-          title: 'Free Fire Topup',
-          subtitle: 'Diamonds · Instant',
-          colors: ff.colors,
-          onTap: () => Get.toNamed(AppRoutes.topup, arguments: ff),
-        ),
-        _StoreTile(
-          image: kingpass.image,
-          title: 'Ludo Kingpass',
-          subtitle: 'Coins · Discount',
-          colors: kingpass.colors,
-          onTap: () => Get.toNamed(AppRoutes.topup, arguments: kingpass),
-        ),
-        _StoreTile(
-          image: AppConstants.shopGamingLogo,
-          title: 'Gaming Store',
-          subtitle: 'Gadgets & gear',
-          colors: const [Color(0xFF2A0A40), Color(0xFF120A26)],
-          onTap: () => Get.toNamed(AppRoutes.products),
-        ),
-      ],
-    );
+    final session = SessionService.to;
+    return Obx(() {
+      final list = session.storeCategories;
+      return GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.95,
+        children: [
+          for (final cat in list)
+            _StoreTile(
+              image: cat.image,
+              title: cat.title,
+              subtitle: cat.subtitle,
+              colors: cat.colors,
+              onTap: () {
+                if (cat.key == 'gaming_store') {
+                  Get.toNamed(AppRoutes.products);
+                } else {
+                  Get.toNamed(AppRoutes.topup, arguments: cat);
+                }
+              },
+            ),
+        ],
+      );
+    });
   }
 }
 
@@ -122,13 +116,19 @@ class _StoreTile extends StatelessWidget {
           children: [
             // Hero image covers the tile; the gradient shows through any
             // transparent areas and stands in if the asset fails to load.
-            Image.asset(
-              image,
-              fit: BoxFit.cover,
-              cacheWidth: 360,
-              filterQuality: FilterQuality.low,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-            ),
+            image.startsWith('http')
+                ? Image.network(
+                    image,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  )
+                : Image.asset(
+                    image,
+                    fit: BoxFit.cover,
+                    cacheWidth: 360,
+                    filterQuality: FilterQuality.low,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
             // Bottom scrim keeps the title legible over any image.
             const DecoratedBox(
               decoration: BoxDecoration(

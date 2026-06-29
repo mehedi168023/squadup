@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../app/core/app_toast.dart';
 import '../../app/widgets/premium_back_button.dart';
 import 'package:get/get.dart';
 import '../../app/data/services/session_service.dart';
@@ -46,25 +48,57 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
           separatorBuilder: (_, __) => const SizedBox(height: 14),
           itemBuilder: (_, i) {
             final m = joined[i];
+            final isLudo = m.modeLabel.toLowerCase().contains('ludo');
+            final hasRoom = m.roomId != null && m.roomId!.isNotEmpty;
             return Column(
               children: [
                 MatchListCard(
                   match: m,
                   onTap: () => Get.toNamed(AppRoutes.matchInfo, arguments: m),
                 ),
-                if (m.roomId != null)
+                if (hasRoom)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: AppCard(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       child: Row(
                         children: [
-                          const Icon(Icons.meeting_room_outlined,
-                              color: AppColors.primary),
+                          Icon(
+                            isLudo ? Icons.vpn_key_outlined : Icons.meeting_room_outlined,
+                            color: isLudo ? AppColors.matchesGreen : AppColors.primary,
+                            size: 18,
+                          ),
                           const SizedBox(width: 10),
-                          Text(
-                              'Room ID: ${m.roomId}  •  Pass: ${m.roomPassword}',
-                              style: AppTextStyles.label),
+                          Expanded(
+                            child: Text(
+                              isLudo
+                                  ? 'Room Code: ${m.roomId}'
+                                  : 'Room ID: ${m.roomId}  •  Pass: ${m.roomPassword}',
+                              style: AppTextStyles.label.copyWith(
+                                color: isLudo ? AppColors.matchesGreen : context.cText,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              Icons.copy,
+                              size: 18,
+                              color: isLudo ? AppColors.matchesGreen : AppColors.primary,
+                            ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              if (isLudo) {
+                                Clipboard.setData(ClipboardData(text: m.roomId ?? ''));
+                                AppToast.success('Room Code Copied!');
+                              } else {
+                                final text = 'Room ID: ${m.roomId}\nPassword: ${m.roomPassword}';
+                                Clipboard.setData(ClipboardData(text: text));
+                                AppToast.success('Room Details Copied!');
+                              }
+                            },
+                          ),
                         ],
                       ),
                     ),

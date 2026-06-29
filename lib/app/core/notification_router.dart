@@ -1,8 +1,10 @@
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../features/shell/shell_screen.dart';
 import '../data/models/match_model.dart';
 import '../data/services/session_service.dart';
 import '../routes/app_routes.dart';
+import 'app_toast.dart';
 
 /// Maps a backend `action_target_screen` key to an in-app navigation. This is
 /// the single deep-link table used by both notification taps and action
@@ -13,6 +15,14 @@ class NotificationRouter {
   /// Open the screen for [target]. [args] carries optional ids (e.g. matchId).
   static void open(String? target, [Map<String, dynamic> args = const {}]) {
     if (target == null || target.isEmpty) return;
+
+    // Auto-copy room code if present in args
+    final roomCode = (args['room_code'] ?? args['room_id'] ?? args['roomId'])?.toString();
+    if (roomCode != null && roomCode.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: roomCode));
+      AppToast.success('Room Code Copied: $roomCode');
+    }
+
     switch (target) {
       case 'wallet':
         Get.toNamed(AppRoutes.wallet);

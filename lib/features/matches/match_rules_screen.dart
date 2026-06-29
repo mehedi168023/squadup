@@ -66,6 +66,9 @@ _ParsedRules _parseRules(String raw) {
       notes.add(line);
     }
   }
+  if (items.isEmpty && raw.trim().isNotEmpty) {
+    items.add(raw.trim());
+  }
   return _ParsedRules(items, notes);
 }
 

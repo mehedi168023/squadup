@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../app/data/mock/mock_data.dart';
 import '../../app/data/models/match_model.dart';
 import '../../app/data/services/session_service.dart';
 import '../../app/routes/app_routes.dart';
@@ -24,21 +23,25 @@ class HomeScreen extends StatelessWidget {
         color: AppColors.primary,
         onRefresh: session.refreshMatches,
         child: ResponsiveCenter(
-          child: ListView(
-            // Clear the floating bottom nav bar (shell uses extendBody: true).
-            padding: EdgeInsets.fromLTRB(
-                12, 12, 12, MediaQuery.of(context).padding.bottom + 84),
-            children: [
-              const PromoBanner(banners: MockData.homeBanners),
-              const SizedBox(height: 16),
-              const SectionHeader('CHOOSE YOUR GAME'),
-              const SizedBox(height: 14),
-              for (final cat in MockData.categories) ...[
-                _CategoryCard(category: cat),
+          child: Obx(() {
+            final banners = session.homeBanners;
+            final categories = session.gameCategories;
+            return ListView(
+              // Clear the floating bottom nav bar (shell uses extendBody: true).
+              padding: EdgeInsets.fromLTRB(
+                  12, 12, 12, MediaQuery.of(context).padding.bottom + 84),
+              children: [
+                PromoBanner(banners: banners),
+                const SizedBox(height: 16),
+                const SectionHeader('CHOOSE YOUR GAME'),
                 const SizedBox(height: 14),
+                for (final cat in categories) ...[
+                  _CategoryCard(category: cat),
+                  const SizedBox(height: 14),
+                ],
               ],
-            ],
-          ),
+            );
+          }),
         ),
       ),
     );
@@ -59,14 +62,14 @@ class _CategoryCard extends StatelessWidget {
     return GestureDetector(
       onTap: _open,
       child: Container(
-        height: 118,
+        height: 86,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: category.colors,
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
-          borderRadius: BorderRadius.circular(AppRadius.xl),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
           boxShadow: [
             BoxShadow(
@@ -89,7 +92,7 @@ class _CategoryCard extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                  horizontal: AppSpacing.lg, vertical: 10),
               child: Row(
                 children: [
                   _IconTile(category: category),
@@ -159,8 +162,17 @@ class _IconTile extends StatelessWidget {
       child: category.image != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(AppRadius.sm),
-              child: Image.asset(category.image!,
-                  fit: BoxFit.cover, cacheWidth: 180),
+              child: category.image!.startsWith('http')
+                  ? Image.network(
+                      category.image!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Icon(category.icon, color: Colors.white, size: 32),
+                    )
+                  : Image.asset(
+                      category.image!,
+                      fit: BoxFit.cover,
+                      cacheWidth: 180,
+                    ),
             )
           : Icon(category.icon, color: Colors.white, size: 32),
     );

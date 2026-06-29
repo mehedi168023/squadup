@@ -75,6 +75,11 @@ class FfMatch {
   final bool isJoined;
   final String? roomId;
   final String? roomPassword;
+  final double prize1;
+  final double prize2;
+  final double prize3;
+  final double prize4;
+  final double prize5;
 
   const FfMatch({
     required this.id,
@@ -97,6 +102,11 @@ class FfMatch {
     this.isJoined = false,
     this.roomId,
     this.roomPassword,
+    this.prize1 = 0,
+    this.prize2 = 0,
+    this.prize3 = 0,
+    this.prize4 = 0,
+    this.prize5 = 0,
   });
 
   /// Decodes the backend `/matches` JSON (snake_case) into an [FfMatch].
@@ -130,6 +140,11 @@ class FfMatch {
       isJoined: j['is_joined'] == true,
       roomId: j['room_id']?.toString(),
       roomPassword: j['room_password']?.toString(),
+      prize1: d(j['prize_1']),
+      prize2: d(j['prize_2']),
+      prize3: d(j['prize_3']),
+      prize4: d(j['prize_4']),
+      prize5: d(j['prize_5']),
     );
   }
 
@@ -160,5 +175,10 @@ class FfMatch {
         isJoined: isJoined ?? this.isJoined,
         roomId: roomId,
         roomPassword: roomPassword,
+        prize1: prize1,
+        prize2: prize2,
+        prize3: prize3,
+        prize4: prize4,
+        prize5: prize5,
       );
 }

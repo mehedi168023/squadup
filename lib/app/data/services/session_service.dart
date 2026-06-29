@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/app_constants.dart';
 import '../../core/app_toast.dart';
@@ -42,6 +43,11 @@ class SessionService extends GetxService {
   final RxList<NoticeItem> notices = <NoticeItem>[].obs;
   final RxnInt yourRank = RxnInt();
 
+  final RxList<BannerItem> homeBanners = <BannerItem>[].obs;
+  final RxList<BannerItem> shopBanners = <BannerItem>[].obs;
+  final RxList<GameCategory> gameCategories = <GameCategory>[].obs;
+  final RxList<TopupCategory> storeCategories = <TopupCategory>[].obs;
+
   bool get isLoggedIn => user.value != null;
 
   @override
@@ -49,7 +55,17 @@ class SessionService extends GetxService {
     super.onInit();
     _seedDemoTransactions();
     _seedDemoOrders();
+    
+    // Seed default offline mock values
+    homeBanners.assignAll(MockData.homeBanners);
+    shopBanners.assignAll(MockData.shopBanners);
+    gameCategories.assignAll(MockData.categories);
+    storeCategories.assignAll(MockData.topupCategories);
+
     fetchNotices();
+    fetchBanners();
+    fetchGameCategories();
+    fetchStoreCategories();
   }
 
   /// A few seeded demo transactions so the history screen isn't empty on a
@@ -117,6 +133,11 @@ class SessionService extends GetxService {
         await fetchLeaderboard();
         await fetchOrders();
         await fetchNotices();
+        try {
+          OneSignal.login(storedUserId.toString());
+        } catch (e) {
+          AppLogger.error('SessionService', 'OneSignal.login error: $e');
+        }
         return true;
       }
     } catch (e) {
@@ -140,8 +161,9 @@ class SessionService extends GetxService {
         final res = response.body;
         if (res['status'] == 'success') {
           final userData = res['user'];
+          final parsedUserId = int.tryParse(userData['id']?.toString() ?? '') ?? 0;
           user.value = UserModel(
-            id: userData['id'],
+            id: parsedUserId,
             name: userData['name'],
             email: userData['email'],
             phone: userData['phone'],
@@ -151,9 +173,14 @@ class SessionService extends GetxService {
           );
           
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setInt('sq_user_id', userData['id']);
+          await prefs.setInt('sq_user_id', parsedUserId);
           
-           await SecurityService.to.linkAccountToDevice(userData['email']);
+          await SecurityService.to.linkAccountToDevice(userData['email']);
+          try {
+            OneSignal.login(parsedUserId.toString());
+          } catch (e) {
+            AppLogger.error('SessionService', 'OneSignal.login error: $e');
+          }
           await fetchMatches();
           await fetchTransactions();
           await fetchLeaderboard();
@@ -201,8 +228,9 @@ class SessionService extends GetxService {
         final res = response.body;
         if (res['status'] == 'success') {
           final userData = res['user'];
+          final parsedUserId = int.tryParse(userData['id']?.toString() ?? '') ?? 0;
           user.value = UserModel(
-            id: userData['id'],
+            id: parsedUserId,
             name: userData['name'],
             email: userData['email'],
             phone: userData['phone'],
@@ -212,9 +240,14 @@ class SessionService extends GetxService {
           );
           
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setInt('sq_user_id', userData['id']);
+          await prefs.setInt('sq_user_id', parsedUserId);
           
           await SecurityService.to.linkAccountToDevice(userData['email']);
+          try {
+            OneSignal.login(parsedUserId.toString());
+          } catch (e) {
+            AppLogger.error('SessionService', 'OneSignal.login error: $e');
+          }
           AppToast.success(res['message'] ?? 'Registration successful');
           await fetchMatches();
           await fetchTransactions();
@@ -250,8 +283,9 @@ class SessionService extends GetxService {
         final res = response.body;
         if (res['status'] == 'success') {
           final userData = res['user'];
+          final parsedUserId = int.tryParse(userData['id']?.toString() ?? '') ?? 0;
           user.value = UserModel(
-            id: userData['id'],
+            id: parsedUserId,
             name: userData['name'],
             email: userData['email'],
             phone: userData['phone'],
@@ -273,6 +307,11 @@ class SessionService extends GetxService {
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('sq_user_id');
+    try {
+      OneSignal.logout();
+    } catch (e) {
+      AppLogger.error('SessionService', 'OneSignal.logout error: $e');
+    }
     user.value = null;
     wallet.value = const WalletModel();
     matches.clear();
@@ -420,7 +459,12 @@ class SessionService extends GetxService {
   // ── Matches ────────────────────────────────────────────────────────────────
 
   Future<void> refreshMatches() async {
-    await fetchMatches();
+    await Future.wait([
+      fetchMatches(),
+      fetchBanners(),
+      fetchGameCategories(),
+      fetchStoreCategories(),
+    ]);
   }
 
   List<FfMatch> matchesForMode(String modeKey) =>
@@ -458,28 +502,33 @@ class SessionService extends GetxService {
             }
 
             return FfMatch(
-              id: m['id'],
-              title: m['title'],
+              id: (m['id'] as num).toInt(),
+              title: (m['title'] ?? '').toString(),
               modeKey: modeKey,
               modeLabel: gameType,
-              startTime: m['time'],
-              status: m['status'],
-              map: gameType == 'FreeFire' ? 'Bermuda' : 'Classic',
+              startTime: DateTime.tryParse(m['time']?.toString() ?? '') ?? DateTime.now(),
+              status: (m['status'] ?? 'active').toString(),
+              map: m['map']?.toString() ?? (gameType == 'FreeFire' ? 'Bermuda' : 'Classic'),
               type: matchType,
-              version: 'Mobile',
-              device: 'Phone',
+              version: m['version']?.toString() ?? 'Mobile',
+              device: m['device']?.toString() ?? 'Phone',
               prize: (m['total_prize'] as num).toDouble(),
               perKill: (m['per_kill'] as num).toDouble(),
               entryFee: (m['entry_fee'] as num).toDouble(),
               slotsTaken: (m['slots_taken'] as num).toInt(),
               slotsTotal: gameType == 'FreeFire' ? 48 : 4,
-              rules: gameType == 'FreeFire'
-                  ? 'Rules: 1. Emulators not allowed. 2. Hackers will be banned. 3. Teaming up is prohibited.'
-                  : 'Rules: 1. Play fairly. 2. Room ID will be given before the match. 3. Submit screenshot after a win.',
+              rules: m['rules']?.toString() ?? (gameType == 'FreeFire'
+                  ? "Rules:\n1. Emulators are strictly not allowed.\n2. Hackers will be banned permanently.\n3. Teaming up is prohibited and results in disqualification."
+                  : "Rules:\n1. Play fairly and respect other players.\n2. Room ID and Password will be shared 15 minutes before the match starts.\n3. Submit win screenshot within 15 minutes after the match ends."),
               participants: const [],
               isJoined: m['is_joined'] == true || m['is_joined'] == 1,
-              roomId: m['room_id'] ?? '',
-              roomPassword: m['room_password'] ?? '',
+              roomId: m['room_id']?.toString() ?? '',
+              roomPassword: m['room_password']?.toString() ?? '',
+              prize1: (m['prize_1'] as num?)?.toDouble() ?? 0.0,
+              prize2: (m['prize_2'] as num?)?.toDouble() ?? 0.0,
+              prize3: (m['prize_3'] as num?)?.toDouble() ?? 0.0,
+              prize4: (m['prize_4'] as num?)?.toDouble() ?? 0.0,
+              prize5: (m['prize_5'] as num?)?.toDouble() ?? 0.0,
             );
           }).toList());
         }
@@ -774,6 +823,144 @@ class SessionService extends GetxService {
       }
     } catch (e) {
       AppLogger.error('SessionService', 'fetchNotices error: $e');
+    }
+  }
+
+  Future<void> fetchBanners() async {
+    try {
+      final response = await _connect.get('$baseUrl?action=get_banners');
+      if (response.isOk && response.body != null) {
+        final res = response.body;
+        if (res['status'] == 'success' && res['banners'] != null) {
+          final List<dynamic> list = res['banners'];
+          final List<BannerItem> homeList = [];
+          final List<BannerItem> shopList = [];
+          
+          for (final b in list) {
+            final String title = b['title'] ?? '';
+            final String image = b['image'] ?? '';
+            final String? route = b['route'] != null && b['route'].toString().isNotEmpty ? b['route'].toString() : null;
+            final String url = b['url'] ?? '';
+            final String colorsStr = b['colors'] ?? '#0e1a2c,#15356b';
+            final colorsList = colorsStr.split(',').map((hex) {
+              final cleanHex = hex.trim().replaceAll('#', '');
+              return Color(int.parse('FF$cleanHex', radix: 16));
+            }).toList();
+            
+            final item = BannerItem(
+              title: title,
+              image: image,
+              route: route,
+              url: url,
+              colors: colorsList.isEmpty ? const [Color(0xFF0E1A2C), Color(0xFF15356B)] : colorsList,
+            );
+            
+            if (b['section'] == 'shop') {
+              shopList.add(item);
+            } else {
+              homeList.add(item);
+            }
+          }
+          
+          if (homeList.isNotEmpty) homeBanners.assignAll(homeList);
+          if (shopList.isNotEmpty) shopBanners.assignAll(shopList);
+        }
+      }
+    } catch (e) {
+      AppLogger.error('SessionService', 'fetchBanners error: $e');
+    }
+  }
+
+  Future<void> fetchGameCategories() async {
+    try {
+      final response = await _connect.get('$baseUrl?action=get_game_categories');
+      if (response.isOk && response.body != null) {
+        final res = response.body;
+        if (res['status'] == 'success' && res['categories'] != null) {
+          final List<dynamic> list = res['categories'];
+          final List<GameCategory> parsedList = [];
+          
+          for (final c in list) {
+            final String key = c['category_key'] ?? '';
+            final String title = c['title'] ?? '';
+            final String subtitle = c['subtitle'] ?? '';
+            final String? image = c['image'] != null && c['image'].toString().isNotEmpty ? c['image'].toString() : null;
+            final String iconName = c['icon'] ?? 'sports_esports';
+            final IconData icon = iconName == 'casino' ? Icons.casino : Icons.sports_esports;
+            
+            final String colorsStr = c['colors'] ?? '#ff6200,#ff9e00';
+            final colorsList = colorsStr.split(',').map((hex) {
+              final cleanHex = hex.trim().replaceAll('#', '');
+              return Color(int.parse('FF$cleanHex', radix: 16));
+            }).toList();
+            
+            final String modeKeysStr = c['mode_keys'] ?? 'br,cs';
+            final modeKeysList = modeKeysStr.split(',').map((k) => k.trim()).toList();
+            
+            parsedList.add(GameCategory(
+              key: key,
+              title: title,
+              subtitle: subtitle,
+              image: image,
+              icon: icon,
+              colors: colorsList.isEmpty ? const [Color(0xFFFF6200), Color(0xFFFF9E00)] : colorsList,
+              modeKeys: modeKeysList,
+            ));
+          }
+          
+          if (parsedList.isNotEmpty) gameCategories.assignAll(parsedList);
+        }
+      }
+    } catch (e) {
+      AppLogger.error('SessionService', 'fetchGameCategories error: $e');
+    }
+  }
+
+  Future<void> fetchStoreCategories() async {
+    try {
+      final response = await _connect.get('$baseUrl?action=get_store_categories');
+      if (response.isOk && response.body != null) {
+        final res = response.body;
+        if (res['status'] == 'success' && res['categories'] != null) {
+          final List<dynamic> list = res['categories'];
+          final List<TopupCategory> parsedList = [];
+          
+          for (final c in list) {
+            final String key = c['category_key'] ?? '';
+            final String title = c['title'] ?? '';
+            final String subtitle = c['subtitle'] ?? '';
+            final String image = c['image'] ?? '';
+            
+            final String colorsStr = c['colors'] ?? '#ff6200,#ff9e00';
+            final colorsList = colorsStr.split(',').map((hex) {
+              final cleanHex = hex.trim().replaceAll('#', '');
+              return Color(int.parse('FF$cleanHex', radix: 16));
+            }).toList();
+            
+            // Find the original mock category to preserve the sub-structures
+            final original = MockData.topupCategories.firstWhereOrNull((cat) => cat.key == key);
+            
+            parsedList.add(TopupCategory(
+              key: key,
+              title: title,
+              subtitle: subtitle,
+              image: image,
+              colors: colorsList.isEmpty ? const [Color(0xFFFF6200), Color(0xFFFF9E00)] : colorsList,
+              idLabel: original?.idLabel ?? 'Player ID',
+              packs: original?.packs ?? const [],
+              howTo: original?.howTo ?? const [],
+              guideImage: original?.guideImage,
+              packIcon: original?.packIcon ?? Icons.diamond_outlined,
+              promo: original?.promo,
+              perks: original?.perks ?? const [],
+            ));
+          }
+          
+          if (parsedList.isNotEmpty) storeCategories.assignAll(parsedList);
+        }
+      }
+    } catch (e) {
+      AppLogger.error('SessionService', 'fetchStoreCategories error: $e');
     }
   }
 }

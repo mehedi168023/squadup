@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../app/core/app_toast.dart';
 import '../../app/widgets/premium_back_button.dart';
 import 'package:get/get.dart';
 import '../../app/core/app_constants.dart';
@@ -261,6 +263,48 @@ class _LudoMatchCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: context.cBgAlt,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: context.cBorder),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.vpn_key_outlined, size: 16, color: AppColors.matchesGreen),
+                const SizedBox(width: 8),
+                Text('Room Code: ', style: AppTextStyles.title.copyWith(fontSize: 13, color: context.cTextDim)),
+                Expanded(
+                  child: Text(
+                    !joined
+                        ? 'Join to view'
+                        : (match.roomId != null && match.roomId!.isNotEmpty
+                            ? (match.roomId ?? '')
+                            : 'Not Available Yet'),
+                    style: AppTextStyles.title.copyWith(
+                      fontSize: 14, 
+                      color: (joined && match.roomId != null && match.roomId!.isNotEmpty)
+                          ? AppColors.matchesGreen 
+                          : context.cTextMuted,
+                      letterSpacing: (joined && match.roomId != null && match.roomId!.isNotEmpty) ? 1.1 : 0.0,
+                    ),
+                  ),
+                ),
+                if (joined && match.roomId != null && match.roomId!.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.copy, size: 18, color: AppColors.matchesGreen),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: match.roomId ?? ''));
+                      AppToast.success('Room Code Copied!');
+                    },
+                  ),
+              ],
+            ),
           ),
         ],
       ),
