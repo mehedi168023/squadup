@@ -49,6 +49,9 @@ class SessionService extends GetxService {
   final RxList<GameCategory> gameCategories = <GameCategory>[].obs;
   final RxList<TopupCategory> storeCategories = <TopupCategory>[].obs;
 
+  final RxString telegramLink = 'https://t.me/squadup'.obs;
+  final RxString whatsappNumber = '8801700000000'.obs;
+
   bool get isLoggedIn => user.value != null;
 
   @override
@@ -67,6 +70,7 @@ class SessionService extends GetxService {
     fetchBanners();
     fetchGameCategories();
     fetchStoreCategories();
+    fetchSettings();
   }
 
   /// A few seeded demo transactions so the history screen isn't empty on a
@@ -499,6 +503,7 @@ class SessionService extends GetxService {
       fetchBanners(),
       fetchGameCategories(),
       fetchStoreCategories(),
+      fetchSettings(),
     ]);
   }
 
@@ -996,6 +1001,22 @@ class SessionService extends GetxService {
       }
     } catch (e) {
       AppLogger.error('SessionService', 'fetchStoreCategories error: $e');
+    }
+  }
+
+  Future<void> fetchSettings() async {
+    try {
+      final response = await _connect.get('$baseUrl?action=get_settings');
+      if (response.isOk && response.body != null) {
+        final res = response.body;
+        if (res['status'] == 'success' && res['settings'] != null) {
+          final settings = res['settings'] as Map;
+          telegramLink.value = settings['telegram_link']?.toString() ?? 'https://t.me/squadup';
+          whatsappNumber.value = settings['whatsapp_number']?.toString() ?? '8801700000000';
+        }
+      }
+    } catch (e) {
+      AppLogger.error('SessionService', 'fetchSettings error: $e');
     }
   }
 }

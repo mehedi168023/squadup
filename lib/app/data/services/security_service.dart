@@ -111,20 +111,11 @@ class SecurityService extends GetxService {
 
   // ── Account Policies (One Device, One Account & Bans) ──────────────────────
 
-  /// Enforces: "One Device, One Account".
-  /// Rejects registration or login if this device is already linked to another email.
+  /// Links account to device (Device lock restrictions removed).
   Future<bool> linkAccountToDevice(String email) async {
-    final currentLink = linkedUserEmail.value;
-    if (currentLink.isNotEmpty && currentLink.toLowerCase() != email.toLowerCase()) {
-      AppLogger.error('SecurityService', 'Security violation: Device is already registered to user: $currentLink');
-      return false; // Rejection: Device belongs to another user
-    }
-
-    if (currentLink.isEmpty) {
-      await _prefs.setString('sq_linked_user', email);
-      linkedUserEmail.value = email;
-      AppLogger.info('SecurityService', 'Account linked to device: $email');
-    }
+    await _prefs.setString('sq_linked_user', email);
+    linkedUserEmail.value = email;
+    AppLogger.info('SecurityService', 'Account linked to device: $email');
     return true;
   }
 

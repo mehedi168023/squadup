@@ -10,6 +10,7 @@ import '../../app/widgets/brand_app_bar.dart';
 import '../../app/widgets/common_widgets.dart';
 import '../../app/widgets/promo_banner.dart';
 import '../../app/widgets/responsive.dart';
+import '../../app/core/app_links.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -39,6 +40,8 @@ class HomeScreen extends StatelessWidget {
                   _CategoryCard(category: cat),
                   const SizedBox(height: 14),
                 ],
+                const SizedBox(height: 6),
+                const _SupportSection(),
               ],
             );
           }),
@@ -175,6 +178,107 @@ class _IconTile extends StatelessWidget {
                     ),
             )
           : Icon(category.icon, color: Colors.white, size: 32),
+    );
+  }
+}
+
+class _SupportSection extends StatelessWidget {
+  const _SupportSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final session = SessionService.to;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader('CUSTOMER SUPPORT'),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: _SupportCard(
+                title: 'Telegram',
+                subtitle: 'Join Community',
+                icon: Icons.telegram,
+                color: const Color(0xFF0088CC),
+                onTap: () => AppLinks.open(session.telegramLink.value),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _SupportCard(
+                title: 'WhatsApp',
+                subtitle: 'Contact Live Chat',
+                icon: Icons.chat_bubble_outline_rounded,
+                color: const Color(0xFF25D366),
+                onTap: () => AppLinks.open('https://wa.me/${session.whatsappNumber.value}'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _SupportCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _SupportCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(title,
+                      style: AppTextStyles.h3
+                          .copyWith(color: Colors.white, fontSize: 14)),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.caption.copyWith(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontSize: 10)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
