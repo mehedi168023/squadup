@@ -7,6 +7,7 @@ import '../../app/core/app_sheets.dart';
 import '../../app/core/app_toast.dart';
 import '../../app/data/models/misc_models.dart';
 import '../../app/data/services/session_service.dart';
+import '../../app/routes/app_routes.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_text_styles.dart';
@@ -28,8 +29,8 @@ class _TopupScreenState extends State<TopupScreen> {
   int _pack = -1;
   int _payment = 0; // 0 = SquadUp, 1 = Direct Gateway
 
-  static const _payments = [
-    ('SquadUp', 'Fast • Secure • Reliable', true),
+  List<(String, String, bool)> get _paymentsList => [
+    ('SquadUp Wallet', 'Winnings Balance: ৳${SessionService.to.wallet.value.winningBalance.toStringAsFixed(2)}', true),
     ('Direct Gateway', 'Secure • Instant • Easy', false),
   ];
 
@@ -49,22 +50,56 @@ class _TopupScreenState extends State<TopupScreen> {
       return;
     }
     final p = cat.packs[_pack];
-    final method = _payment == 0 ? 'wallet' : 'gateway';
 
-    AppLoader.show();
-    final ok = await SessionService.to.submitTopupOrder(
-      categoryKey: cat.key,
-      packId: _pack,
-      gameUserId: _userId.text.trim(),
-      price: p.price,
-      amount: p.amount,
-      unit: p.unit,
-      paymentMethod: method,
-    );
-    AppLoader.dismiss();
-    if (!ok || !mounted) return;
-    AppToast.success(
-        'Order #${SessionService.to.orders.first.id} placed: ${p.amount} ${p.unit} via ${_payments[_payment].$1}');
+    if (_payment == 0) {
+      // SquadUp Wallet payment: check winning balance
+      final winningBal = SessionService.to.wallet.value.winningBalance;
+      if (winningBal < p.price) {
+        AppToast.warning('ইনসাফিসিয়েন্ট উইনিং ব্যালেন্স (মিনিমাম ৳${p.price.toStringAsFixed(2)} লাগবে)');
+        return;
+      }
+      
+      AppLoader.show();
+      final ok = await SessionService.to.submitTopupOrder(
+        categoryKey: cat.key,
+        packId: _pack,
+        gameUserId: _userId.text.trim(),
+        price: p.price,
+        amount: p.amount,
+        unit: p.unit,
+        paymentMethod: 'wallet',
+      );
+      AppLoader.dismiss();
+      if (!ok || !mounted) return;
+      AppToast.success('Order placed successfully using SquadUp Wallet!');
+    } else {
+      // Direct Gateway: open payment webview screen
+      Get.toNamed(
+        AppRoutes.depositWebview,
+        arguments: {
+          'amount': p.price,
+          'closeDouble': false,
+          'isOrderPayment': true,
+        },
+      )?.then((completed) async {
+        if (completed == true) {
+          AppLoader.show();
+          final ok = await SessionService.to.submitTopupOrder(
+            categoryKey: cat.key,
+            packId: _pack,
+            gameUserId: _userId.text.trim(),
+            price: p.price,
+            amount: p.amount,
+            unit: p.unit,
+            paymentMethod: 'gateway',
+          );
+          AppLoader.dismiss();
+          if (ok) {
+            AppToast.success('Order placed successfully via Gateway!');
+          }
+        }
+      });
+    }
   }
 
   void _openHowTo() {
@@ -177,15 +212,15 @@ class _TopupScreenState extends State<TopupScreen> {
               subtitle: 'Choose your preferred payment method',
               child: Column(
                 children: [
-                  for (int i = 0; i < _payments.length; i++) ...[
+                  for (int i = 0; i < _paymentsList.length; i++) ...[
                     _PaymentTile(
-                      name: _payments[i].$1,
-                      subtitle: _payments[i].$2,
-                      recommended: _payments[i].$3,
+                      name: _paymentsList[i].$1,
+                      subtitle: _paymentsList[i].$2,
+                      recommended: _paymentsList[i].$3,
                       selected: _payment == i,
                       onTap: () => setState(() => _payment = i),
                     ),
-                    if (i != _payments.length - 1)
+                    if (i != _paymentsList.length - 1)
                       const SizedBox(height: AppSpacing.md),
                   ],
                 ],

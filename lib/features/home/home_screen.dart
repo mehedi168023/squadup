@@ -119,7 +119,7 @@ class _CategoryCard extends StatelessWidget {
               right: 12,
               child: Obx(() {
                 final count = session.matches
-                    .where((m) => category.modeKeys.contains(m.modeKey))
+                    .where((m) => category.modeKeys.contains(m.modeKey) && m.status != 'hidden')
                     .length;
                 return Container(
                   padding:

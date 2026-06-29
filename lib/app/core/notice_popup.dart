@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../data/mock/mock_data.dart';
 import '../data/models/misc_models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/glass.dart';
+import '../data/services/session_service.dart';
 import 'app_constants.dart';
 import 'app_links.dart';
 
@@ -31,9 +31,10 @@ class NoticePopup {
 
   /// Always shows the popup (used by the bell icon).
   static void show() {
-    if (MockData.notices.isEmpty) return;
+    final list = SessionService.to.notices;
+    if (list.isEmpty) return;
     Get.dialog(
-      const _NoticeDialog(notices: MockData.notices),
+      _NoticeDialog(notices: list),
       barrierColor: Colors.black.withValues(alpha: 0.72),
     );
   }

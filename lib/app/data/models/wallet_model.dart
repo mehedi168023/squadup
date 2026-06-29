@@ -19,12 +19,16 @@ class WalletModel {
         wonAmount: (j['won_amount'] ?? 0).toDouble(),
       );
 
-  WalletModel copyWith({double? availableBalance, double? winningBalance}) =>
+  WalletModel copyWith({
+    double? availableBalance,
+    double? winningBalance,
+    double? withdrawableBalance,
+  }) =>
       WalletModel(
         availableBalance: availableBalance ?? this.availableBalance,
         winningBalance: winningBalance ?? this.winningBalance,
-        withdrawableBalance: withdrawableBalance,
-        wonAmount: wonAmount,
+        withdrawableBalance: withdrawableBalance ?? this.withdrawableBalance,
+        wonAmount: winningBalance ?? this.winningBalance,
       );
 }
 

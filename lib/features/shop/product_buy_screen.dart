@@ -9,6 +9,7 @@ import '../../app/data/mock/mock_data.dart';
 import '../../app/data/models/misc_models.dart';
 import '../../app/data/services/bd_location_api.dart';
 import '../../app/data/services/session_service.dart';
+import '../../app/routes/app_routes.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
 import '../../app/widgets/common_widgets.dart';
@@ -45,6 +46,7 @@ class _ProductBuyScreenState extends State<ProductBuyScreen> {
   final _address = TextEditingController();
   final _phone = TextEditingController();
   bool _placing = false;
+  int _paymentMethodIndex = 2; // Default to Cash on Delivery (index 2)
 
   double get _subtotal => product.price * _qty;
   double get _delivery => _division == null
@@ -128,30 +130,97 @@ class _ProductBuyScreenState extends State<ProductBuyScreen> {
       AppToast.error(phoneErr);
       return;
     }
-    setState(() => _placing = true);
-    final ok = await SessionService.to.submitProductOrder({
-      'productName': product.name,
-      'qty': _qty,
-      'color': _color,
-      'unitPrice': product.price,
-      'subtotal': _subtotal,
-      'deliveryCharge': _delivery,
-      'total': _total,
-      'divisionId': _division!.id,
-      'divisionName': _division!.name,
-      'districtId': _district!.id,
-      'districtName': _district!.name,
-      'address': _address.text.trim(),
-      'phone': phone,
-      'paymentMethod': 'cod',
-    });
-    if (!mounted) return;
-    setState(() => _placing = false);
-    if (!ok) return;
-    final orderId = SessionService.to.orders.first.id;
-    Get.back();
-    AppToast.success(
-        'Order #$orderId placed! $_qty× ${product.name} • ${taka(_total)}');
+
+    if (_paymentMethodIndex == 0) {
+      // Winning Wallet payment: check winning balance
+      final winningBal = SessionService.to.wallet.value.winningBalance;
+      if (winningBal < _total) {
+        AppToast.warning('ইনসাফিসিয়েন্ট উইনিং ব্যালেন্স (মিনিমাম ৳${_total.toStringAsFixed(2)} লাগবে)');
+        return;
+      }
+      
+      setState(() => _placing = true);
+      final ok = await SessionService.to.submitProductOrder({
+        'productName': product.name,
+        'qty': _qty,
+        'color': _color,
+        'unitPrice': product.price,
+        'subtotal': _subtotal,
+        'deliveryCharge': _delivery,
+        'total': _total,
+        'divisionId': _division!.id,
+        'divisionName': _division!.name,
+        'districtId': _district!.id,
+        'districtName': _district!.name,
+        'address': _address.text.trim(),
+        'phone': phone,
+        'paymentMethod': 'wallet',
+      });
+      if (!mounted) return;
+      setState(() => _placing = false);
+      if (!ok) return;
+      Get.back();
+      AppToast.success('Order placed successfully using Winning Wallet!');
+    } else if (_paymentMethodIndex == 1) {
+      // Direct Gateway
+      Get.toNamed(
+        AppRoutes.depositWebview,
+        arguments: {
+          'amount': _total,
+          'closeDouble': false,
+          'isOrderPayment': true,
+        },
+      )?.then((completed) async {
+        if (completed == true) {
+          setState(() => _placing = true);
+          final ok = await SessionService.to.submitProductOrder({
+            'productName': product.name,
+            'qty': _qty,
+            'color': _color,
+            'unitPrice': product.price,
+            'subtotal': _subtotal,
+            'deliveryCharge': _delivery,
+            'total': _total,
+            'divisionId': _division!.id,
+            'divisionName': _division!.name,
+            'districtId': _district!.id,
+            'districtName': _district!.name,
+            'address': _address.text.trim(),
+            'phone': phone,
+            'paymentMethod': 'gateway',
+          });
+          if (!mounted) return;
+          setState(() => _placing = false);
+          if (ok) {
+            Get.back();
+            AppToast.success('Order placed successfully via Online Payment!');
+          }
+        }
+      });
+    } else {
+      setState(() => _placing = true);
+      final ok = await SessionService.to.submitProductOrder({
+        'productName': product.name,
+        'qty': _qty,
+        'color': _color,
+        'unitPrice': product.price,
+        'subtotal': _subtotal,
+        'deliveryCharge': _delivery,
+        'total': _total,
+        'divisionId': _division!.id,
+        'divisionName': _division!.name,
+        'districtId': _district!.id,
+        'districtName': _district!.name,
+        'address': _address.text.trim(),
+        'phone': phone,
+        'paymentMethod': 'cod',
+      });
+      if (!mounted) return;
+      setState(() => _placing = false);
+      if (!ok) return;
+      Get.back();
+      AppToast.success('Order placed successfully! Please prepare cash on delivery.');
+    }
   }
 
   @override
@@ -260,6 +329,86 @@ class _ProductBuyScreenState extends State<ProductBuyScreen> {
                       FilteringTextInputFormatter.digitsOnly,
                       LengthLimitingTextInputFormatter(11),
                     ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Payment Method Selection Card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: _premiumCardDeco(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.payment_rounded, color: AppColors.primary, size: 20),
+                      const SizedBox(width: 8),
+                      Text('Payment Method', 
+                        style: AppTextStyles.title.copyWith(fontSize: 15, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Column(
+                    children: List.generate(3, (index) {
+                      final methods = [
+                        ('Winning Wallet', 'Winning Balance: ৳${SessionService.to.wallet.value.winningBalance.toStringAsFixed(2)}', Icons.account_balance_wallet_outlined),
+                        ('Online Payment', 'bKash / Nagad / Rocket / Cards', Icons.payment_outlined),
+                        ('Cash on Delivery', 'Pay upon receiving product', Icons.local_shipping_outlined),
+                      ];
+                      final m = methods[index];
+                      final isSel = _paymentMethodIndex == index;
+                      return GestureDetector(
+                        onTap: () => setState(() => _paymentMethodIndex = index),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: isSel ? AppColors.primary.withValues(alpha: 0.08) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isSel ? AppColors.primary : context.cBorder.withValues(alpha: 0.6),
+                              width: isSel ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(m.$3, color: isSel ? AppColors.primary : context.cTextDim, size: 20),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(m.$1, style: AppTextStyles.body1.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: isSel ? AppColors.primary : null,
+                                    )),
+                                    const SizedBox(height: 2),
+                                    Text(m.$2, style: AppTextStyles.body2.copyWith(
+                                      color: isSel ? AppColors.primary.withValues(alpha: 0.8) : context.cTextMuted,
+                                      fontSize: 12,
+                                    )),
+                                  ],
+                                ),
+                              ),
+                              if (isSel)
+                                const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20)
+                              else
+                                Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: context.cBorder, width: 1.5),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
                   ),
                 ],
               ),

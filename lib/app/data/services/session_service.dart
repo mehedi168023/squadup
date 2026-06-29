@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/app_constants.dart';
@@ -22,7 +23,7 @@ import './security_service.dart';
 class SessionService extends GetxService {
   static SessionService get to => Get.find();
 
-  static const String baseUrl = 'http://localhost:8080/squadup_backend/api.php';
+  static const String baseUrl = 'http://127.0.0.1:8080/squadup_backend/api.php';
   final GetConnect _connect = GetConnect(timeout: const Duration(seconds: 10));
 
   final Rxn<UserModel> user = Rxn<UserModel>();
@@ -31,6 +32,7 @@ class SessionService extends GetxService {
   final RxList<TransactionModel> transactions = <TransactionModel>[].obs;
   final RxList<OrderModel> orders = <OrderModel>[].obs;
   final RxList<LeaderboardEntry> leaderboard = <LeaderboardEntry>[].obs;
+  final RxList<NoticeItem> notices = <NoticeItem>[].obs;
   final RxnInt yourRank = RxnInt();
 
   bool get isLoggedIn => user.value != null;
@@ -40,6 +42,7 @@ class SessionService extends GetxService {
     super.onInit();
     _seedDemoTransactions();
     _seedDemoOrders();
+    fetchNotices();
   }
 
   /// A few seeded demo transactions so the history screen isn't empty on a
@@ -106,6 +109,7 @@ class SessionService extends GetxService {
         await fetchTransactions();
         await fetchLeaderboard();
         await fetchOrders();
+        await fetchNotices();
         return true;
       }
     } catch (e) {
@@ -142,12 +146,12 @@ class SessionService extends GetxService {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setInt('sq_user_id', userData['id']);
           
-          await SecurityService.to.linkAccountToDevice(userData['email']);
-          
+           await SecurityService.to.linkAccountToDevice(userData['email']);
           await fetchMatches();
           await fetchTransactions();
           await fetchLeaderboard();
           await fetchOrders();
+          await fetchNotices();
           return true;
         } else {
           if (res['message'] == 'ONE_DEVICE_ONE_ACCOUNT_LIMIT') {
@@ -204,12 +208,12 @@ class SessionService extends GetxService {
           await prefs.setInt('sq_user_id', userData['id']);
           
           await SecurityService.to.linkAccountToDevice(userData['email']);
-          
           AppToast.success(res['message'] ?? 'Registration successful');
           await fetchMatches();
           await fetchTransactions();
           await fetchLeaderboard();
           await fetchOrders();
+          await fetchNotices();
           return true;
         } else {
           if (res['message'] == 'ONE_DEVICE_ONE_ACCOUNT_LIMIT') {
@@ -247,6 +251,8 @@ class SessionService extends GetxService {
           );
           wallet.value = WalletModel(
             availableBalance: (userData['balance'] as num).toDouble(),
+            winningBalance: (userData['won_amount'] as num).toDouble(),
+            withdrawableBalance: (userData['won_amount'] as num).toDouble(),
           );
           return true;
         }
@@ -411,7 +417,7 @@ class SessionService extends GetxService {
   }
 
   List<FfMatch> matchesForMode(String modeKey) =>
-      matches.where((m) => m.modeKey == modeKey).toList();
+      matches.where((m) => m.modeKey == modeKey && m.status != 'hidden' && m.status != 'hide').toList();
 
   List<FfMatch> get joinedMatches => matches.where((m) => m.isJoined).toList();
 
@@ -437,11 +443,11 @@ class SessionService extends GetxService {
             final gameType = m['game_type'] ?? '';
             final matchType = m['match_type'] ?? '';
             
-            String modeKey = 'ff_solo';
+            String modeKey = 'br';
             if (gameType == 'FreeFire') {
-              modeKey = matchType.toString().toLowerCase() == 'squad' ? 'ff_squad' : 'ff_solo';
+              modeKey = matchType.toString().toLowerCase() == 'squad' ? 'cs' : 'br';
             } else {
-              modeKey = matchType.toString().toLowerCase() == 'auto' ? 'ludo_auto' : 'ludo_classic';
+              modeKey = matchType.toString().toLowerCase() == 'auto' ? 'auto_ludo' : 'ludo_king';
             }
 
             return FfMatch(
@@ -669,6 +675,8 @@ class SessionService extends GetxService {
         if (res['status'] == 'success') {
           wallet.value = wallet.value.copyWith(
             availableBalance: (res['new_balance'] as num).toDouble(),
+            winningBalance: (res['new_won_amount'] as num).toDouble(),
+            withdrawableBalance: (res['new_won_amount'] as num).toDouble(),
           );
           await fetchOrders();
           await fetchTransactions();
@@ -730,4 +738,35 @@ class SessionService extends GetxService {
     return false;
   }
 
+  Future<void> fetchNotices() async {
+    try {
+      final response = await _connect.get('$baseUrl?action=get_notices');
+      if (response.isOk && response.body != null) {
+        final res = response.body;
+        if (res['status'] == 'success' && res['notices'] != null) {
+          final list = res['notices'] as List;
+          notices.assignAll(list.map((n) {
+            final String img = n['image'] ?? '';
+            final String? rt = n['route'];
+            final String? url = n['url'];
+            
+            final String colorsStr = n['colors'] ?? '#1e3a8a,#0e1a2c';
+            final colorsList = colorsStr.split(',').map((hex) {
+              final cleanHex = hex.trim().replaceAll('#', '');
+              return Color(int.parse('FF$cleanHex', radix: 16));
+            }).toList();
+            
+            return NoticeItem(
+              image: img,
+              route: rt != null && rt.isNotEmpty ? rt : null,
+              url: url != null && url.isNotEmpty ? url : null,
+              colors: colorsList,
+            );
+          }).toList());
+        }
+      }
+    } catch (e) {
+      AppLogger.error('SessionService', 'fetchNotices error: $e');
+    }
+  }
 }

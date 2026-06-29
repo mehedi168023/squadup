@@ -40,12 +40,12 @@ class FreeFireScreen extends StatelessWidget {
                 ),
                 itemBuilder: (_, i) {
                   final mode = MockData.gameModes[i];
-                  return GameModeCard(
+                  return Obx(() => GameModeCard(
                     mode: mode,
-                    matchesFound: mode.matchesFound,
+                    matchesFound: session.matchesForMode(mode.key).length,
                     onTap: () =>
                         Get.toNamed(AppRoutes.matchList, arguments: mode),
-                  );
+                  ));
                 },
               ),
             ],

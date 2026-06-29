@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../app/core/app_constants.dart';
+import '../../app/core/app_toast.dart';
 import '../../app/data/models/heads_up_notification.dart';
 import '../../app/data/services/notification_service.dart';
 import '../../app/data/services/session_service.dart';
@@ -22,30 +23,51 @@ class DepositWebviewScreen extends StatefulWidget {
 }
 
 class _DepositWebviewScreenState extends State<DepositWebviewScreen> {
-  late final double amount = Get.arguments as double;
+  late final double amount = (Get.arguments is Map) ? (Get.arguments as Map)['amount'] : (Get.arguments as double);
+  late final bool closeDouble = (Get.arguments is Map) ? ((Get.arguments as Map)['closeDouble'] ?? false) : true;
+  late final bool isOrderPayment = (Get.arguments is Map) ? ((Get.arguments as Map)['isOrderPayment'] ?? false) : false;
   bool _processing = false;
 
   Future<void> _pay() async {
     setState(() => _processing = true);
-    await SessionService.to.deposit(amount);
+    
+    bool ok = true;
+    if (!isOrderPayment) {
+      ok = await SessionService.to.deposit(amount);
+    } else {
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+    }
+    
     if (!mounted) return;
     setState(() => _processing = false);
-    Get.back(); // close gateway
-    Get.back(); // close deposit screen → back to wallet
-    NotificationService.to.showHeadsUp(
-      HeadsUpNotification(
-        id: 'pay_${DateTime.now().millisecondsSinceEpoch}',
-        title: 'Payment Success ✅',
-        message: '${taka(amount)} added to your wallet.',
-        kind: NotifKind.action,
-        priority: NotifPriority.high,
-        icon: 'wallet',
-        actionText: 'Open Wallet',
-        actionTarget: 'wallet',
-        sound: 'coin',
-      ),
-      osNotify: true,
-    );
+    
+    if (ok) {
+      if (closeDouble) {
+        Get.back(); // close gateway
+        Get.back(); // close deposit screen
+      } else {
+        Get.back(result: true); // return true to caller
+      }
+      
+      if (!isOrderPayment) {
+        NotificationService.to.showHeadsUp(
+          HeadsUpNotification(
+            id: 'pay_${DateTime.now().millisecondsSinceEpoch}',
+            title: 'Payment Success ✅',
+            message: '${taka(amount)} added to your wallet.',
+            kind: NotifKind.action,
+            priority: NotifPriority.high,
+            icon: 'wallet',
+            actionText: 'Open Wallet',
+            actionTarget: 'wallet',
+            sound: 'coin',
+          ),
+          osNotify: true,
+        );
+      }
+    } else {
+      AppToast.error('Payment failed');
+    }
   }
 
   @override
