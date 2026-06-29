@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../app/data/services/session_service.dart';
 import '../../app/routes/app_routes.dart';
-import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_text_styles.dart';
 import '../../app/widgets/brand_app_bar.dart';
 import '../../app/widgets/common_widgets.dart';
@@ -51,7 +50,7 @@ class _StoreGrid extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 0.95,
+        childAspectRatio: 1.0,
         children: [
           for (final cat in list)
             _StoreTile(
@@ -73,7 +72,7 @@ class _StoreGrid extends StatelessWidget {
   }
 }
 
-/// A single store tile: full-bleed hero image with a readable title overlay.
+/// A single store tile: circular card layout with centered typography overlay.
 class _StoreTile extends StatelessWidget {
   final String image;
   final String title;
@@ -94,19 +93,19 @@ class _StoreTile extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
+          shape: BoxShape.circle,
           gradient: LinearGradient(
             colors: colors,
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(AppRadius.xl),
           border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           boxShadow: [
             BoxShadow(
-              color: colors.first.withValues(alpha: 0.5),
-              blurRadius: 16,
-              spreadRadius: -8,
-              offset: const Offset(0, 8),
+              color: colors.first.withValues(alpha: 0.3),
+              blurRadius: 12,
+              spreadRadius: -4,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -129,37 +128,36 @@ class _StoreTile extends StatelessWidget {
                     filterQuality: FilterQuality.low,
                     errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                   ),
-            // Bottom scrim keeps the title legible over any image.
+            // Overall darker overlay for readability inside a circle
             const DecoratedBox(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.center,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Color(0xCC000000)],
-                ),
+                shape: BoxShape.circle,
+                color: Colors.black38,
               ),
             ),
-            Positioned(
-              left: 12,
-              right: 12,
-              bottom: 12,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.h3
-                          .copyWith(color: Colors.white, fontSize: 15)),
-                  const SizedBox(height: 2),
-                  Text(subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.caption.copyWith(
-                          color: Colors.white.withValues(alpha: 0.75),
-                          fontSize: 10)),
-                ],
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.h3
+                            .copyWith(color: Colors.white, fontSize: 13)),
+                    const SizedBox(height: 3),
+                    Text(subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.caption.copyWith(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: 9)),
+                  ],
+                ),
               ),
             ),
           ],
