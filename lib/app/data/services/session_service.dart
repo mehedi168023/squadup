@@ -646,12 +646,37 @@ class SessionService extends GetxService {
 
   // ── Profile ────────────────────────────────────────────────────────────────
 
-  Future<void> updateProfile({required String name}) async {
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    final u = user.value;
-    if (u != null) {
-      user.value = u.copyWith(name: name);
+  Future<bool> updateProfile({required String name, File? avatarFile}) async {
+    try {
+      final u = user.value;
+      if (u == null) return false;
+
+      final Map<String, dynamic> fields = {
+        'action': 'update_profile',
+        'user_id': u.id.toString(),
+        'name': name,
+      };
+
+      if (avatarFile != null) {
+        final bytes = await avatarFile.readAsBytes();
+        fields['avatar'] = MultipartFile(bytes, filename: 'avatar_${u.id}.png');
+      }
+
+      final form = FormData(fields);
+      final response = await _connect.post(baseUrl, form);
+      if (response.isOk && response.body != null) {
+        final res = response.body;
+        if (res['status'] == 'success' && res['user'] != null) {
+          user.value = UserModel.fromJson(res['user']);
+          return true;
+        } else {
+          AppToast.error(res['message'] ?? 'Profile update failed');
+        }
+      }
+    } catch (e) {
+      AppToast.error('Network error updating profile: $e');
     }
+    return false;
   }
 
   Future<bool> changePassword(String current, String next) async {

@@ -8,6 +8,7 @@ class UserModel {
   final String accountStatus; // active | banned
   final int totalMatchesPlayed;
   final int totalMatchesWon;
+  final String? avatar;
 
   const UserModel({
     required this.id,
@@ -18,6 +19,7 @@ class UserModel {
     this.accountStatus = 'active',
     this.totalMatchesPlayed = 0,
     this.totalMatchesWon = 0,
+    this.avatar,
   });
 
   String get uid => '#$id';
@@ -32,9 +34,10 @@ class UserModel {
         accountStatus: j['account_status'] ?? 'active',
         totalMatchesPlayed: j['total_matches_played'] ?? 0,
         totalMatchesWon: j['total_matches_won'] ?? 0,
+        avatar: j['avatar'],
       );
 
-  UserModel copyWith({String? name, String? email, String? phone}) => UserModel(
+  UserModel copyWith({String? name, String? email, String? phone, String? avatar}) => UserModel(
         id: id,
         name: name ?? this.name,
         email: email ?? this.email,
@@ -43,5 +46,6 @@ class UserModel {
         accountStatus: accountStatus,
         totalMatchesPlayed: totalMatchesPlayed,
         totalMatchesWon: totalMatchesWon,
+        avatar: avatar ?? this.avatar,
       );
 }

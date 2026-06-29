@@ -6,7 +6,6 @@ import '../../app/data/mock/mock_data.dart';
 import '../../app/data/models/misc_models.dart';
 import '../../app/routes/app_routes.dart';
 import '../../app/theme/app_colors.dart';
-import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_text_styles.dart';
 import '../../app/widgets/responsive.dart';
 
@@ -17,7 +16,14 @@ class ProductsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(leading: const PremiumBackButton(), title: const Text('Gaming Products')),
+      backgroundColor: const Color(0xFF081026),
+      appBar: AppBar(
+        leading: const PremiumBackButton(),
+        title: const Text('Gaming Products', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF081026),
+        elevation: 0,
+        centerTitle: true,
+      ),
       body: ResponsiveCenter(
         child: GridView.builder(
           padding: EdgeInsets.fromLTRB(
@@ -27,7 +33,7 @@ class ProductsScreen extends StatelessWidget {
             crossAxisCount: 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 0.78,
+            childAspectRatio: 0.76,
           ),
           itemBuilder: (_, i) => RepaintBoundary(
               child: _ProductCard(product: MockData.products[i])),
@@ -49,18 +55,29 @@ class _ProductCard extends StatelessWidget {
       onTap: _openBuy,
       child: Container(
         decoration: BoxDecoration(
-          color: context.cSurface,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(color: context.cBorder),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0F1E3D), Color(0xFF0C142B)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            )
+          ],
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Product image (falls back to an icon when no image is set).
+            // Product image
             Expanded(
               child: Container(
-                color: AppColors.primary.withValues(alpha: 0.08),
+                color: Colors.white.withValues(alpha: 0.02),
                 alignment: Alignment.center,
                 child: product.image != null
                     ? Image.asset(
@@ -69,9 +86,9 @@ class _ProductCard extends StatelessWidget {
                         width: double.infinity,
                         cacheWidth: 360,
                         errorBuilder: (_, __, ___) => Icon(product.icon,
-                            size: 56, color: AppColors.primary),
+                            size: 48, color: AppColors.primary),
                       )
-                    : Icon(product.icon, size: 56, color: AppColors.primary),
+                    : Icon(product.icon, size: 48, color: AppColors.primary),
               ),
             ),
             Padding(
@@ -82,18 +99,19 @@ class _ProductCard extends StatelessWidget {
                   Text(product.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.title.copyWith(fontSize: 13.5)),
+                      style: AppTextStyles.title.copyWith(fontSize: 13.5, color: Colors.white)),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Text(taka(product.price),
                           style: AppTextStyles.title.copyWith(
-                              fontSize: 15, color: AppColors.matchesGreen)),
+                              fontSize: 14.5, color: AppColors.matchesGreen, fontWeight: FontWeight.bold)),
                       const SizedBox(width: 6),
                       if (product.oldPrice != null)
                         Text(taka(product.oldPrice!),
                             style: AppTextStyles.body2.copyWith(
-                              color: context.cTextMuted,
+                              color: Colors.white.withValues(alpha: 0.5),
+                              fontSize: 11,
                               decoration: TextDecoration.lineThrough,
                             )),
                     ],
@@ -119,22 +137,22 @@ class _BuyButton extends StatelessWidget {
     return GestureDetector(
       onTap: () => Get.toNamed(AppRoutes.productBuy, arguments: product),
       child: Container(
-        height: 34,
+        height: 32,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.16),
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+          color: AppColors.primary.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.shopping_bag_rounded,
-                size: 15, color: AppColors.primary),
+                size: 14, color: AppColors.primary),
             const SizedBox(width: 6),
             Text('Buy Now',
                 style: AppTextStyles.label.copyWith(
-                    color: AppColors.primary, fontWeight: FontWeight.w700)),
+                    color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold)),
           ],
         ),
       ),

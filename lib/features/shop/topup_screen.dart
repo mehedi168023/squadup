@@ -208,8 +208,8 @@ class _TopupScreenState extends State<TopupScreen> {
                     bottom: -20,
                     child: Image.asset(
                       cat.key.contains('ludo')
-                          ? 'assets/images/kingpass/coin6.png'
-                          : 'assets/images/topup/diamond6.png',
+                          ? 'assets/images/kingpass/coin6.webp'
+                          : 'assets/images/topup/diamond6.webp',
                       width: 90,
                       height: 90,
                       fit: BoxFit.contain,
@@ -474,8 +474,8 @@ class _PackCard extends StatelessWidget {
     final clampIdx = (index + 1).clamp(1, 9);
     final isLudo = categoryKey.contains('ludo');
     final String imagePath = isLudo
-        ? 'assets/images/kingpass/coin$clampIdx.png'
-        : 'assets/images/topup/diamond$clampIdx.png';
+        ? 'assets/images/kingpass/coin$clampIdx.webp'
+        : 'assets/images/topup/diamond$clampIdx.webp';
 
     return GestureDetector(
       onTap: onTap,
