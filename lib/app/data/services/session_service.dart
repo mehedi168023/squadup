@@ -658,12 +658,11 @@ class SessionService extends GetxService {
       };
 
       if (avatarFile != null) {
-        final bytes = await avatarFile.readAsBytes();
-        fields['avatar'] = MultipartFile(bytes, filename: 'avatar_${u.id}.png');
+        fields['avatar'] = MultipartFile(avatarFile.path, filename: 'avatar_${u.id}.png');
       }
 
       final form = FormData(fields);
-      final response = await _connect.post(baseUrl, form);
+      final response = await _connect.post('$baseUrl?action=update_profile', form);
       if (response.isOk && response.body != null) {
         final res = response.body;
         if (res['status'] == 'success' && res['user'] != null) {

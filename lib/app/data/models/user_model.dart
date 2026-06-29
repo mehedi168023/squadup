@@ -31,7 +31,7 @@ class UserModel {
         email: j['email'] ?? '',
         phone: j['phone'] ?? '',
         referCode: j['refer_code'] ?? '',
-        accountStatus: j['account_status'] ?? 'active',
+        accountStatus: j['status'] ?? j['account_status'] ?? 'active',
         totalMatchesPlayed: j['total_matches_played'] ?? 0,
         totalMatchesWon: j['total_matches_won'] ?? 0,
         avatar: j['avatar'],
