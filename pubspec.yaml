@@ -64,6 +64,8 @@ flutter:
     - assets/images/banner_joingroup.webp
     - assets/images/gaming_pad.json
     - assets/images/glow_loading.json
+    - assets/images/topup/
+    - assets/images/kingpass/
 
   fonts:
     # Display font is only ever used at w800 (see AppTextStyles), so only the

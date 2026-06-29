@@ -131,14 +131,20 @@ class _TopupScreenState extends State<TopupScreen> {
       ),
     );
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(leading: const PremiumBackButton(), title: Text(cat.title)),
+      backgroundColor: const Color(0xFF081026),
+      appBar: AppBar(
+        leading: const PremiumBackButton(),
+        title: Text(cat.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF081026),
+        elevation: 0,
+        centerTitle: true,
+      ),
       body: ResponsiveCenter(
         child: ListView(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
           children: [
             // STEP 01 — Enter UID.
             _StepCard(
@@ -146,31 +152,67 @@ class _TopupScreenState extends State<TopupScreen> {
               lead: 'ENTER ',
               accent: 'GAME UID',
               subtitle: 'Enter your ${cat.idLabel} to top-up',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Stack(
+                clipBehavior: Clip.none,
                 children: [
-                  TextField(
-                    controller: _userId,
-                    textInputAction: TextInputAction.done,
-                    style: AppTextStyles.body1.copyWith(fontSize: 16),
-                    decoration: InputDecoration(
-                      hintText: 'Enter your ${cat.idLabel}',
-                      prefixIcon: const Icon(Icons.badge_outlined),
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _userId,
+                              textInputAction: TextInputAction.done,
+                              style: AppTextStyles.body1.copyWith(fontSize: 15, color: const Color(0xFF0D2C54)),
+                              decoration: InputDecoration(
+                                hintText: 'Enter your ${cat.idLabel}',
+                                hintStyle: TextStyle(color: const Color(0xFF5C728D).withValues(alpha: 0.6)),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                prefixIcon: const Icon(Icons.badge_outlined, color: Color(0xFF1976D2)),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(color: Color(0xFFD4E3F7), width: 1.2),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(color: Color(0xFF1976D2), width: 1.6),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 80), // Reserve space for chest graphic overlay
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      GestureDetector(
+                        onTap: _openHowTo,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.help_outline_rounded,
+                                size: 16, color: Color(0xFF1976D2)),
+                            const SizedBox(width: 6),
+                            Text('How to find UID?',
+                                style: AppTextStyles.label
+                                    .copyWith(color: const Color(0xFF1976D2), fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-                  GestureDetector(
-                    onTap: _openHowTo,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.info_outline,
-                            size: 16, color: AppColors.primary),
-                        const SizedBox(width: 6),
-                        Text('How to find UID?',
-                            style: AppTextStyles.label
-                                .copyWith(color: AppColors.primary)),
-                      ],
+                  Positioned(
+                    right: -10,
+                    bottom: -20,
+                    child: Image.asset(
+                      cat.key.contains('ludo')
+                          ? 'assets/images/kingpass/coin6.png'
+                          : 'assets/images/topup/diamond6.png',
+                      width: 90,
+                      height: 90,
+                      fit: BoxFit.contain,
                     ),
                   ),
                 ],
@@ -183,7 +225,7 @@ class _TopupScreenState extends State<TopupScreen> {
               lead: 'SELECT ',
               accent: 'PACK',
               subtitle: 'Choose the best pack for you',
-              trailing: const _SafeBadge(),
+              trailing: const _BigSavingBadge(),
               child: GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -192,13 +234,14 @@ class _TopupScreenState extends State<TopupScreen> {
                   crossAxisCount: 3,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
-                  childAspectRatio: 0.56,
+                  childAspectRatio: 0.52,
                 ),
                 itemBuilder: (_, i) => _PackCard(
                   pack: cat.packs[i],
                   index: i,
                   icon: cat.packIcon,
                   selected: _pack == i,
+                  categoryKey: cat.key,
                   onTap: () => setState(() => _pack = i),
                 ),
               ),
@@ -263,11 +306,22 @@ class _StepCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: context.cSurface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: context.cBorder),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFEDF4FC), Color(0xFFFFFFFF)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFD4E3F7), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0A1E3D).withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,26 +338,26 @@ class _StepCard extends StatelessWidget {
                     RichText(
                       text: TextSpan(
                         style: AppTextStyles.h2.copyWith(
-                            color: context.cText, fontSize: 18, height: 1.1),
+                            color: const Color(0xFF0D2C54), fontSize: 18, height: 1.1),
                         children: [
                           TextSpan(text: lead),
                           TextSpan(
                               text: accent,
-                              style: const TextStyle(color: AppColors.gold)),
+                              style: const TextStyle(color: Color(0xFF1976D2), fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     Text(subtitle,
                         style: AppTextStyles.body2
-                            .copyWith(color: context.cTextDim)),
+                            .copyWith(color: const Color(0xFF5C728D), fontSize: 11)),
                   ],
                 ),
               ),
               if (trailing != null) trailing!,
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: 16),
           child,
         ],
       ),
@@ -318,52 +372,79 @@ class _StepBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 44,
-      padding: const EdgeInsets.symmetric(vertical: 7),
+      width: 46,
+      padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF3B7BF0), Color(0xFF16357D)],
+          colors: [Color(0xFF2196F3), Color(0xFF0D47A1)],
         ),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(10),
+          bottomRight: Radius.circular(10),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0D47A1).withValues(alpha: 0.2),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          )
+        ],
       ),
       child: Column(
         children: [
           Text('STEP',
               style: AppTextStyles.caption
-                  .copyWith(color: Colors.white, fontSize: 8)),
+                  .copyWith(color: Colors.white.withValues(alpha: 0.9), fontSize: 7, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
           Text(step,
               style:
-                  AppTextStyles.h2.copyWith(color: Colors.white, fontSize: 20)),
+                  AppTextStyles.h2.copyWith(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 }
 
-class _SafeBadge extends StatelessWidget {
-  const _SafeBadge();
+class _BigSavingBadge extends StatelessWidget {
+  const _BigSavingBadge();
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.matchesGreen.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        border:
-            Border.all(color: AppColors.matchesGreen.withValues(alpha: 0.5)),
+        color: const Color(0xFFD32F2F),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFFFFCDD2), width: 1.0),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: const Column(
         children: [
-          const Icon(Icons.verified_user_rounded,
-              size: 13, color: AppColors.matchesGreen),
-          const SizedBox(width: 5),
-          Text('SAFE',
-              style: AppTextStyles.caption.copyWith(
-                  color: AppColors.matchesGreen, fontWeight: FontWeight.w800)),
+          Text(
+            'SAVE UP TO',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 7,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            '৳90',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              height: 1.1,
+            ),
+          ),
+          Text(
+            'ON BIG PACKS!',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 6,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -376,94 +457,205 @@ class _PackCard extends StatelessWidget {
   final IconData icon;
   final bool selected;
   final VoidCallback onTap;
+  final String categoryKey;
+
   const _PackCard({
     required this.pack,
     required this.index,
     required this.icon,
     required this.selected,
     required this.onTap,
+    required this.categoryKey,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = PackTheme.getForIndex(index);
+    final clampIdx = (index + 1).clamp(1, 9);
+    final isLudo = categoryKey.contains('ludo');
+    final String imagePath = isLudo
+        ? 'assets/images/kingpass/coin$clampIdx.png'
+        : 'assets/images/topup/diamond$clampIdx.png';
+
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: AppDurations.fast,
-        padding: const EdgeInsets.fromLTRB(5, 8, 5, 9),
-        decoration: BoxDecoration(
-          color: selected
-              ? AppColors.primary.withValues(alpha: 0.14)
-              : context.cBgAlt,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(
-            color: selected ? AppColors.primary : context.cBorder,
-            width: selected ? 1.6 : 1,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // PACK N
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 3),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          AnimatedContainer(
+            duration: AppDurations.fast,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: theme.bgGradient,
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
-              child: Text('PACK ${index + 1}',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.caption.copyWith(
-                      color: Colors.white, fontWeight: FontWeight.w800)),
-            ),
-            Icon(icon, color: AppColors.gold, size: 30),
-            Column(
-              children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(pack.amount,
-                      style: AppTextStyles.h3.copyWith(fontSize: 15)),
-                ),
-                Text(pack.unit.toUpperCase(),
-                    style: AppTextStyles.caption
-                        .copyWith(color: context.cTextMuted, fontSize: 8)),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: selected ? theme.borderSelectedColor : const Color(0xFFD4E3F7),
+                width: selected ? 2.0 : 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: selected
+                      ? theme.borderSelectedColor.withValues(alpha: 0.25)
+                      : const Color(0xFF0A1E3D).withValues(alpha: 0.04),
+                  blurRadius: selected ? 10 : 6,
+                  spreadRadius: selected ? 1 : 0,
+                  offset: const Offset(0, 3),
+                )
               ],
             ),
-            Column(
+            clipBehavior: Clip.antiAlias,
+            child: Column(
               children: [
-                Text(taka(pack.regularPrice),
-                    style: AppTextStyles.body2.copyWith(
-                      color: AppColors.danger,
-                      fontSize: 9.5,
-                      decoration: TextDecoration.lineThrough,
-                    )),
+                // Header badge "PACK N"
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  padding: const EdgeInsets.symmetric(vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.gold,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                    color: theme.headerColor,
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(8),
+                      bottomRight: Radius.circular(8),
+                    ),
                   ),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(taka(pack.price),
-                        style: AppTextStyles.title.copyWith(
-                            color: const Color(0xFF1A1500), fontSize: 13)),
+                  child: Text(
+                    'PACK ${index + 1}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                
+                // Pack Graphic Image
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Image.asset(
+                      imagePath,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+
+                // Amount Text
+                Text(
+                  pack.amount,
+                  style: const TextStyle(
+                    color: Color(0xFF0D2C54),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
+                  ),
+                ),
+                Text(
+                  pack.unit.toUpperCase(),
+                  style: const TextStyle(
+                    color: Color(0xFF5C728D),
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                // Pricing
+                Text(
+                  taka(pack.regularPrice),
+                  style: const TextStyle(
+                    color: Color(0xFFD32F2F),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    decoration: TextDecoration.lineThrough,
+                  ),
+                ),
+                const SizedBox(height: 2),
+
+                // Taka Price yellow button
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFFD54F), Color(0xFFFFB300)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFFFA000), width: 1.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFFA000).withValues(alpha: 0.15),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      )
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      taka(pack.price),
+                      style: const TextStyle(
+                        color: Color(0xFF4E3400),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                // Save footer banner
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  color: theme.footerColor,
+                  child: Text(
+                    'SAVE ${taka(pack.save)}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
             ),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text('SAVE ${taka(pack.save)}',
-                  style: AppTextStyles.caption.copyWith(
-                      color: AppColors.matchesGreen,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 9)),
+          ),
+          // BEST VALUE Badge (Only for index == 1 / Pack 2)
+          if (index == 1)
+            Positioned(
+              top: -6,
+              right: 6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD32F2F),
+                  borderRadius: BorderRadius.circular(4),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFD32F2F).withValues(alpha: 0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    )
+                  ],
+                ),
+                child: const Text(
+                  'BEST VALUE',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 7,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -492,44 +684,72 @@ class _PaymentTile extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: selected
-              ? AppColors.matchesGreen.withValues(alpha: 0.1)
-              : context.cBgAlt,
-          borderRadius: BorderRadius.circular(AppRadius.md),
+              ? const Color(0xFFE8F5E9)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? AppColors.matchesGreen : context.cBorder,
-            width: selected ? 1.6 : 1,
+            color: selected ? const Color(0xFF2E7D32) : const Color(0xFFD4E3F7),
+            width: selected ? 1.6 : 1.2,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0A1E3D).withValues(alpha: 0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            )
+          ],
         ),
         child: Row(
           children: [
             Container(
-              width: 46,
-              height: 46,
+              width: 44,
+              height: 44,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF2196F3), Color(0xFF0D47A1)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Text(name.split(' ').map((w) => w[0]).take(2).join(),
-                  style: AppTextStyles.h3.copyWith(color: Colors.white)),
+              child: Text(
+                name.split(' ').map((w) => w[0]).take(2).join(),
+                style: AppTextStyles.h3.copyWith(color: Colors.white, fontSize: 14),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, style: AppTextStyles.title.copyWith(fontSize: 15)),
-                  Text(subtitle, style: AppTextStyles.body2),
-                  if (recommended)
-                    Text('RECOMMENDED',
-                        style: AppTextStyles.caption.copyWith(
-                            color: AppColors.matchesGreen,
-                            fontWeight: FontWeight.w800)),
+                  Text(
+                    name,
+                    style: AppTextStyles.title.copyWith(fontSize: 14, color: const Color(0xFF0D2C54)),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.body2.copyWith(color: const Color(0xFF5C728D), fontSize: 11),
+                  ),
+                  if (recommended) ...[
+                    const SizedBox(height: 2),
+                    const Text(
+                      'RECOMMENDED',
+                      style: TextStyle(
+                        color: Color(0xFF2E7D32),
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
-            Icon(selected ? Icons.check_circle_rounded : Icons.circle_outlined,
-                color: selected ? AppColors.matchesGreen : context.cTextMuted),
+            Icon(
+              selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+              color: selected ? const Color(0xFF2E7D32) : const Color(0xFF5C728D),
+            ),
           ],
         ),
       ),
@@ -550,16 +770,86 @@ class _Perks extends StatelessWidget {
       children: [
         for (final p in perks)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: context.cSurface,
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-              border: Border.all(color: context.cBorder),
+              color: const Color(0xFFEDF4FC),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFD4E3F7), width: 1.0),
             ),
-            child: Text(p,
-                style: AppTextStyles.label.copyWith(color: context.cTextDim)),
+            child: Text(
+              p,
+              style: AppTextStyles.label.copyWith(color: const Color(0xFF0D2C54), fontSize: 10, fontWeight: FontWeight.w600),
+            ),
           ),
       ],
     );
+  }
+}
+
+class PackTheme {
+  final List<Color> bgGradient;
+  final Color headerColor;
+  final Color footerColor;
+  final Color borderSelectedColor;
+
+  const PackTheme({
+    required this.bgGradient,
+    required this.headerColor,
+    required this.footerColor,
+    required this.borderSelectedColor,
+  });
+
+  static PackTheme getForIndex(int index) {
+    switch (index % 6) {
+      case 0: // Blue
+        return const PackTheme(
+          bgGradient: [Color(0xFFEBF3FC), Color(0xFFFFFFFF)],
+          headerColor: Color(0xFF1E88E5),
+          footerColor: Color(0xFF0D47A1),
+          borderSelectedColor: Color(0xFF1565C0),
+        );
+      case 1: // Green (Best Value)
+        return const PackTheme(
+          bgGradient: [Color(0xFFEEF9F1), Color(0xFFFFFFFF)],
+          headerColor: Color(0xFF43A047),
+          footerColor: Color(0xFF1B5E20),
+          borderSelectedColor: Color(0xFF2E7D32),
+        );
+      case 2: // Purple
+        return const PackTheme(
+          bgGradient: [Color(0xFFF7EFFB), Color(0xFFFFFFFF)],
+          headerColor: Color(0xFF8E24AA),
+          footerColor: Color(0xFF4A148C),
+          borderSelectedColor: Color(0xFF6A1B9A),
+        );
+      case 3: // Orange
+        return const PackTheme(
+          bgGradient: [Color(0xFFFFF3E0), Color(0xFFFFFFFF)],
+          headerColor: Color(0xFFF57C00),
+          footerColor: Color(0xFFE65100),
+          borderSelectedColor: Color(0xFFEF6C00),
+        );
+      case 4: // Pink
+        return const PackTheme(
+          bgGradient: [Color(0xFFFCE4EC), Color(0xFFFFFFFF)],
+          headerColor: Color(0xFFD81B60),
+          footerColor: Color(0xFF880E4F),
+          borderSelectedColor: Color(0xFFC2185B),
+        );
+      case 5: // Golden
+        return const PackTheme(
+          bgGradient: [Color(0xFFFFFDE7), Color(0xFFFFFFFF)],
+          headerColor: Color(0xFFFBC02D),
+          footerColor: Color(0xFFF57F17),
+          borderSelectedColor: Color(0xFFF9A825),
+        );
+      default:
+        return const PackTheme(
+          bgGradient: [Color(0xFFEBF3FC), Color(0xFFFFFFFF)],
+          headerColor: Color(0xFF1E88E5),
+          footerColor: Color(0xFF0D47A1),
+          borderSelectedColor: Color(0xFF1565C0),
+        );
+    }
   }
 }
