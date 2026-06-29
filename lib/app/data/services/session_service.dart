@@ -13,6 +13,7 @@ import '../models/user_model.dart';
 import '../models/wallet_model.dart';
 import '../mock/mock_data.dart';
 import './security_service.dart';
+import '../../routes/app_routes.dart';
 
 /// Fully-local mock session. Holds the reactive state the whole app reads and
 /// mutates it in-memory (seeded from [MockData]). Every method that the UI
@@ -281,8 +282,22 @@ class SessionService extends GetxService {
       final response = await _connect.get('$baseUrl?action=get_profile&user_id=$userId');
       if (response.isOk && response.body != null) {
         final res = response.body;
+        if (res['status'] == 'error' && res['message'] == 'USER_BANNED') {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('sq_user_id');
+          user.value = null;
+          Get.offAllNamed(AppRoutes.splash);
+          return false;
+        }
         if (res['status'] == 'success') {
           final userData = res['user'];
+          if (userData['status'] == 'banned') {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.remove('sq_user_id');
+            user.value = null;
+            Get.offAllNamed(AppRoutes.splash);
+            return false;
+          }
           final parsedUserId = int.tryParse(userData['id']?.toString() ?? '') ?? 0;
           user.value = UserModel(
             id: parsedUserId,
@@ -459,6 +474,26 @@ class SessionService extends GetxService {
   // ── Matches ────────────────────────────────────────────────────────────────
 
   Future<void> refreshMatches() async {
+    final sec = SecurityService.to;
+    final devBanned = await sec.checkDeviceBan();
+    if (devBanned) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('sq_user_id');
+      user.value = null;
+      Get.offAllNamed(AppRoutes.splash);
+      return;
+    }
+    if (isLoggedIn) {
+      final userBanned = await sec.checkUserBan(user.value!.email);
+      if (userBanned) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('sq_user_id');
+        user.value = null;
+        Get.offAllNamed(AppRoutes.splash);
+        return;
+      }
+    }
+
     await Future.wait([
       fetchMatches(),
       fetchBanners(),
